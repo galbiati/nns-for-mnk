@@ -42,19 +42,6 @@ def cnn2(input_var=None):
                                         nonlinearity=lasagne.nonlinearities.softmax)
     return network
 
-def cnn_best(input_var=None):
-    input_shape=(None, 2, 4, 9)
-    network = lasagne.layers.InputLayer(shape=input_shape, input_var=input_var)
-    network = lasagne.layers.Conv2DLayer(network, num_filters=64, filter_size=(2,2), pad='full',
-                                        nonlinearity=lasagne.nonlinearities.rectify,
-                                        W=lasagne.init.GlorotUniform())
-    network = lasagne.layers.DenseLayer(network, num_units=128,
-                                        nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.DropoutLayer(network, p=.5)
-    network = lasagne.layers.DenseLayer(network, num_units=36, 
-                                        nonlinearity=lasagne.nonlinearities.softmax)
-    return network
-
 def cnn3(input_var=None):
     input_shape=(None, 2, 4, 9)
     network = lasagne.layers.InputLayer(shape=input_shape, input_var=input_var)
@@ -87,7 +74,7 @@ def cnn4(input_var=None):
     return network
 
 def cnn5(input_var=None):
-    # best: 256 filters
+    # best: 256 filters; 64 filters almost as good, so keeping that
     input_shape=(None, 2, 4, 9)
     network = lasagne.layers.InputLayer(shape=input_shape, input_var=input_var)
     network = lasagne.layers.Conv2DLayer(network, num_filters=64, filter_size=(4,4), pad='full',

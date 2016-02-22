@@ -49,7 +49,10 @@ class MNKNet():
     def load_data(self):
         print("Loading data...")
         self.data = load_dataset()
-        self.Xtr, self.ytr, self.Xv, self.yv, self.Xt, self.yt = split_dataset(self.data, augment=True)
+        self.splits, self.subjects, self.raw = split_dataset(self.data, augment=True)
+        self.Xtr, self.ytr, self.Xv, self.yv, self.Xt, self.yt = self.splits
+        self.S, self.trainset, self.valset, self.testset = self.subjects
+        self.X, self.y = self.raw
         return None
 
     def train(self, epochs=500, batchsize=500):
