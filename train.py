@@ -20,6 +20,9 @@ from load_data import *
 # FUTURE:
 #   pretrain with reinforcement learning?
 
+default_data_file = '../../Google Drive/Bas Zahy Gianni - Games/hvh_boards_for_neural_nets.txt'
+param_file = 'param_file.npz'
+
 class MNKNet():
     def __init__(self, arch):
         self.arch = arch
@@ -120,6 +123,17 @@ class MNKNet():
         print("  Stopped in epoch:\t\t\t{}".format(self.last_epoch+1))
         print("  test loss:\t\t\t{:.6f}".format(self.test_nll / test_bats))
         print("  test accuracy:\t\t{:.2f} %".format(self.test_acc / test_bats * 100))
+
+    def save_params(self):
+        self.param_vals = lasagne.layers.get_all_param_values(self.network)
+        np.savez(param_file, *self.param_vals)
+        return None
+
+    def load_params(self):
+        self.param_vals = np.load(param_file)
+        lasagne.layers.set_all_param_values(self.network, [pars[arr] for arr in pars.files])
+        return None
+
 
 def main():
     net = MNKNet(cnn5)

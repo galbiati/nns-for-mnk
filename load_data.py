@@ -7,7 +7,6 @@ import theano.tensor as T
 import lasagne
 import pandas as pd
 
-default_data_file = '../../Google Drive/Bas Zahy Gianni - Games/hvh_boards_for_neural_nets.txt' 
 
 def load_dataset(data_file=default_data_file, subject=None):
     columns = ['subject', 'color', 'bp', 'wp', 'response', 'rt']
