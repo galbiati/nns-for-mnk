@@ -47,12 +47,12 @@ class MNKNet():
                                                                 learning_rate=.01, momentum=.9)
         self.train_fn = theano.function([self.input_var, self.target_var], self.loss, updates=self.updates)
         self.val_fn = theano.function([self.input_var, self.target_var], [self.test_loss, self.test_acc])
-        self.output_fn = theano.function([net.input_var], net.test_prediction) 
+        self.output_fn = theano.function([self.input_var], self.test_prediction) 
         return None
 
-    def load_data(self):
+    def load_data(self, datafile=default_data_file):
         print("Loading data...")
-        self.data = load_dataset()
+        self.data = load_dataset(datafile)
         self.splits, self.subjects, self.raw = split_dataset(self.data, augment=True)
         self.Xtr, self.ytr, self.Xv, self.yv, self.Xt, self.yt = self.splits
         self.S, self.trainset, self.valset, self.testset = self.subjects

@@ -8,7 +8,7 @@ import lasagne
 import pandas as pd
 
 
-def load_dataset(data_file=default_data_file, subject=None):
+def load_dataset(data_file):
     columns = ['subject', 'color', 'bp', 'wp', 'response', 'rt']
     datatypes = [('subject', 'i4'), ('color', 'i4'), 
                  ('bp', 'S36'), ('wp', 'S36'), 
