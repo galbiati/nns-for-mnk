@@ -47,6 +47,7 @@ class MNKNet():
                                                                 learning_rate=.01, momentum=.9)
         self.train_fn = theano.function([self.input_var, self.target_var], self.loss, updates=self.updates)
         self.val_fn = theano.function([self.input_var, self.target_var], [self.test_loss, self.test_acc])
+        self.output_fn = theano.function([net.input_var], net.test_prediction) 
         return None
 
     def load_data(self):
