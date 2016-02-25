@@ -18,6 +18,7 @@ def load_dataset(data_file):
     decoder = lambda x: x.decode('utf-8')
     data.loc[:, 'bp'] = data.loc[:, 'bp'].map(decoder)
     data.loc[:, 'wp'] = data.loc[:, 'wp'].map(decoder)
+    data.loc[data.color==1, ['bp', 'wp']] = data.loc[data.color==1, ['wp', 'bp']].values
     data = data.reset_index(drop=True)
     return data
 
