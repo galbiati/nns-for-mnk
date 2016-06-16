@@ -7,7 +7,6 @@ import theano.tensor as T
 import lasagne
 import pandas as pd
 
-
 def load_dataset(data_file):
     columns = ['subject', 'color', 'bp', 'wp', 'response', 'rt']
     datatypes = [('subject', 'i4'), ('color', 'i4'), 
@@ -18,7 +17,7 @@ def load_dataset(data_file):
     decoder = lambda x: x.decode('utf-8')
     data.loc[:, 'bp'] = data.loc[:, 'bp'].map(decoder)
     data.loc[:, 'wp'] = data.loc[:, 'wp'].map(decoder)
-    data.loc[data.color==1, ['bp', 'wp']] = data.loc[data.color==1, ['wp', 'bp']].values
+    data.loc[data.color==1, ['bp', 'wp']] = data.loc[data.color==1, ['wp', 'bp']].values # swap so always own vs opp
     data = data.reset_index(drop=True)
     return data
 
@@ -33,47 +32,35 @@ def shape_dataset(data):
     S = data.loc[:, 'subject'].values
     return X, y, S
 
-def split_dataset(data, splitsize=8, augment=False):
-    X, y, S = shape_dataset(data)    
+def split_dataset(data, splitsize=5):
 
-    if augment:
-        X = np.concatenate([X, X[:, :, :, ::-1], X[:, :, ::-1, :], X[:, :, ::-1, ::-1]])
-        ytemp = np.zeros((y.shape[0], 36))
-        ytemp[np.arange(ytemp.shape[0]), y] = 1
-        ytemp = ytemp.reshape([ytemp.shape[0], 4, 9])
-        y2 = np.concatenate([ytemp, ytemp[:, :, ::-1], ytemp[:, ::-1, :], ytemp[:, ::-1, ::-1]])
-        y2 = y2.reshape([y2.shape[0], 36])
-        y = np.where(y2==1)[1].astype(np.int32)
-        S = np.concatenate([S, S, S, S])
+    X, y, S = shape_dataset(data)
+    splits = [[] for s in range(splitsize)]
 
-    train = []
-    val = []
-    test = []
-    for s in data.subject.unique():
-        # for each subject, get training, validation, and test indices
-        si = np.where(S==s)[0]
-        Nsi = si.shape[0]
-        cut = Nsi // splitsize
-        r_sec = np.random.permutation(si)
-        train.append(r_sec[slice(0, Nsi-cut*2)])        
-        val.append(r_sec[slice(Nsi-cut*2, Nsi-cut)])
-        test.append(r_sec[slice(Nsi-cut, Nsi+1)])
+    for subject in data.subject.unique():
+        subject_idx = np.random.permutation(np.where(S==subject)[0])
+        N_moves = subject_idx.shape[0]
+        cut_size = N_moves//splitsize 
 
+        for s in range(splitsize-1):
+            splits[s].append(subject_idx[slice(s*cut_size, (s+1)*cut_size)])
+        splits[-1].append(subject_idx[((splitsize-1)*cut_size):])
+    splits = [np.concatenate(s) for s in splits]
+    Xsplits = [X[s, :, :, :] for s in splits]
+    ysplits = [y[s] for s in splits]
+    Ssplits = [S[s] for s in splits]
 
-    _train = np.concatenate(train)
-    _val = np.concatenate(val)
-    _test = np.concatenate(test)
+    return splits, Xsplits, ysplits, Ssplits, splitsize
 
-    Xtr, ytr = X[_train, :, :, :], y[_train]
-    Xv, yv = X[_val, :, :, :], y[_val]
-    Xt, yt = X[_test, :, :, :], y[_test]
-    
-    splits = (Xtr, ytr, Xv, yv, Xt, yt)
-    subjects = (S, train, val, test)
-    raw = (X, y)
+def augment(D):
+    X, y = D
+    X = np.concatenate([X, X[:, :, :, ::-1], X[:, :, ::-1, :], X[:, :, ::-1, ::-1]])
+    # the below is probably wasteful. However, since augment isn't called that often, not a priority fix.
+    ytemp = np.zeros((y.shape[0], 36))
+    ytemp[np.arange(ytemp.shape[0]), y] = 1
+    ytemp = ytemp.reshape([ytemp.shape[0], 4, 9])
+    y2 = np.concatenate([ytemp, ytemp[:, :, ::-1], ytemp[:, ::-1, :], ytemp[:, ::-1, ::-1]])
+    y2 = y2.reshape([y2.shape[0], 36])
+    y = np.where(y2==1)[1].astype(np.int32)
 
-    return splits, subjects, raw
-
-# write new data loader:
-# for each subject, divide data into train/test/validate
-# then concatenate and store indices for later reference
+    return X, y
