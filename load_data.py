@@ -7,12 +7,12 @@ import theano.tensor as T
 import lasagne
 import pandas as pd
 
-def load_dataset(data_file):
+def load_dataset(filename):
     columns = ['subject', 'color', 'bp', 'wp', 'response', 'rt']
     datatypes = [('subject', 'i4'), ('color', 'i4'), 
                  ('bp', 'S36'), ('wp', 'S36'), 
                  ('response', 'i4'), ('rt', 'i4')]
-    data = np.loadtxt(data_file, delimiter=',', dtype=datatypes)
+    data = np.loadtxt(filename, delimiter=',', dtype=datatypes)
     data = pd.DataFrame.from_records(data)
     decoder = lambda x: x.decode('utf-8')
     data.loc[:, 'bp'] = data.loc[:, 'bp'].map(decoder)
@@ -64,3 +64,36 @@ def augment(D):
     y = np.where(y2==1)[1].astype(np.int32)
 
     return X, y
+
+def CV_loader(filename):
+    splitsize = 5
+    
+    columns = ['subject', 'color', 'bp', 'wp', 'response', 'rt', 'splitg']
+    datatypes = [
+        ('subject', 'i4'), ('color', 'i4'), ('bp', 'S36'), ('wp', 'S36'), 
+        ('response', 'i4'), ('rt', 'i4'), ('splitg', 'i4')
+    ]
+    data = np.loadtxt(filename, delimiter=',', dtype=datatypes)
+    data = pd.DataFrame.from_records(data)
+    decoder = lambda x: x.decode('utf-8')
+    data.loc[:, 'bp'] = data.loc[:, 'bp'].map(decoder)
+    data.loc[:, 'wp'] = data.loc[:, 'wp'].map(decoder)
+    data.loc[data.color==1, ['bp', 'wp']] = data.loc[data.color==1, ['wp', 'bp']].values
+    data = data.reset_index(drop=True)
+    
+    decoder = lambda x: np.array(list(x)).astype(int).reshape([4,9])
+    bp = np.array(list(map(decoder, data.loc[:, 'bp'].values)))
+    wp = np.array(list(map(decoder, data.loc[:, 'wp'].values)))
+    X = np.zeros([bp.shape[0], 2, bp.shape[1], bp.shape[2]])
+    X[:, 0, :, :] = bp
+    X[:, 1, :, :] = wp
+    y = data.loc[:, 'response'].values
+    S = data.loc[:, 'subject'].values
+
+    splits = [data.loc[data.splitg == s, :].index.values for s in np.arange(splitsize)+1]
+
+    Xsplits = [X[s, :, :, :] for s in splits]
+    ysplits = [y[s] for s in splits]
+    Ssplits = [S[s] for s in splits]
+    
+    return data, splits, Xsplits, ysplits, Ssplits, splitsize
