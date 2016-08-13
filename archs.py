@@ -64,6 +64,8 @@ def smart_agent(nfil=32, input_var=None):
     return network
 
 def softmax_agent(nfil=None, input_var=None):
+
+    # TODO: in load_data.py, add a subject-by-subject loader for alternate training scheme
     
     class FixLayer(lasagne.layers.Layer):
         def get_output_for(self, input, **kwargs):
