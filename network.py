@@ -78,9 +78,9 @@ class MNKNet():
                 val_acc += acc
                 val_bats += 1
 
-            tr_nll_trace[epoch] = tr_err
-            val_nll_trace[epoch] = val_err
-            val_acc_trace[epoch] = val_acc
+            tr_nll_trace[epoch] = tr_err / tr_bats
+            val_nll_trace[epoch] = val_err / val_bats
+            val_acc_trace[epoch] = val_acc / val_bats * 100
 
             # early stop
             self.last_epoch = epoch
