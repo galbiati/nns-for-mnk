@@ -29,11 +29,11 @@ class MNKNet():
         self.test_acc = T.mean(T.eq(T.argmax(self.test_prediction, axis=1), self.target_var),
                                 dtype=theano.config.floatX)
         self.params = lasagne.layers.get_all_params(self.network, trainable=True)
-        self.updates = lasagne.updates.nesterov_momentum(self.loss, self.params, 
+        self.updates = lasagne.updates.nesterov_momentum(self.loss, self.params,
                                                                 learning_rate=.01, momentum=.9)
         self.train_fn = theano.function([self.input_var, self.target_var], self.loss, updates=self.updates)
         self.val_fn = theano.function([self.input_var, self.target_var], [self.test_loss, self.test_acc])
-        self.output_fn = theano.function([self.input_var], self.test_prediction) 
+        self.output_fn = theano.function([self.input_var], self.test_prediction)
         return None
 
     def load_data(self):
@@ -90,7 +90,7 @@ class MNKNet():
                     print('Validation error stopped decreasing...')
                     print('Abandon ship!')
                     break
-            if epoch % everyn == 0: 
+            if epoch % everyn == 0:
                 print("Epoch {} of {} took {:.3f}s".format(
                         epoch+1, epochs, time.time() - epoch_start))
                 print("  training loss:\t\t{:.4f}".format(tr_err / tr_bats))
