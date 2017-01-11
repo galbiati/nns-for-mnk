@@ -1,139 +1,78 @@
-import time
 import numpy as np
 import theano
-import theano.tensor as T
-import lasagne
-import pandas as pd
-from util import *
-from archs import *
-from load_data import *
+import lasagne as L
 
-def softmax_safe_ce(x, y):
-    xtemp = x - x.max(1, keepdims=True)
-    lsm = xtemp - T.log(T.sum(T.exp(xtemp), axis=1, keepdims=True))
-    return T.sum(y*lsm, axis=1)
+T = theano.tensor
+get_output = L.layers.get_output
+get_all_params = L.layers.get_all_params
+cross_entropy = L.objectives.categorical_crossentropy
 
-class MNKNet():
-    # todo: move datafile into load data
-    def __init__(self, arch, datafile):
-        self.datafile = datafile
-        self.arch = arch
-        self.build_net(self.arch)
-        self.load_data()
-
-    def build_net(self, arch):
-        print("Compiling Theano expressions...")
+class Network():
+    """
+    Base for subclassing networks for MNK
+    """
+    def __init__(self, architecture):
+        self.architecture = architecture
         self.input_var = T.tensor4('inputs')
         self.target_var = T.ivector('targets')
-        self.network = self.arch(self.input_var)
-        self.prediction = lasagne.layers.get_output(self.network)
-        # l2penalty = lasagne.regularization.regularize_network_params(self.network, lambda x: .5*lasagne.regularization.l2(x))
-        self.loss = lasagne.objectives.categorical_crossentropy(self.prediction, self.target_var)
-        self.loss = self.loss.mean() #+ l2penalty
-        self.test_prediction = lasagne.layers.get_output(self.network, deterministic=True)
-        self.test_loss = lasagne.objectives.categorical_crossentropy(self.test_prediction, self.target_var)
-        self.test_loss = self.test_loss.mean()
-        self.test_acc = T.mean(T.eq(T.argmax(self.test_prediction, axis=1), self.target_var),
-                                dtype=theano.config.floatX)
-        self.params = lasagne.layers.get_all_params(self.network, trainable=True)
-        self.updates = lasagne.updates.adam(self.loss, self.params, learning_rate=.001)
-        #lasagne.updates.nesterov_momentum(self.loss, self.params, learning_rate=.01, momentum=.9)
-        self.train_fn = theano.function([self.input_var, self.target_var], self.loss, updates=self.updates)
-        self.val_fn = theano.function([self.input_var, self.target_var], [self.test_loss, self.test_acc])
+        self.update_algo = L.updates.adam
+        self.build()
+        self.make_objectives()
+        self.val_trace = np.zeros(5000)
+        self.train_trace = np.zeros(5000)
+        self.trace_loc = 0
+
+    def build(self):
+        self.net = self.architecture(self.input_var)
+        self.prediction = get_output(self.net)
+        self.test_prediction = get_output(self.net, deterministic=True)
+        self.params = get_all_params(self.net, trainable=True)
         self.output_fn = theano.function([self.input_var], self.test_prediction)
         return None
 
-    def load_data(self):
-        print("Loading data...")
-        self.data = load_dataset(self.datafile)
-        self.splits, self.Xsplit, self.ysplit, self.Ssplit, self.splitsize = split_dataset(self.data)
+    def make_objectives(self):
+        self.loss = cross_entropy(self.prediction, self.target_var)
+        self.loss = self.loss.mean()
+        self.test_loss = cross_entropy(self.test_prediction, self.target_var)
+        self.test_loss = self.test_loss.mean()
+        self.test_acc = T.mean(
+            T.eq(T.argmax(self.test_prediction, axis=1), self.target_var),
+            dtype=theano.config.floatX
+        )
+
+        self.updates = self.update_algo(self.loss, self.params)
+        self.train_fn = theano.function(
+            [self.input_var, self.target_var], self.loss,
+            updates=self.updates
+        )
+        self.test_fn = theano.function(
+            [self.input_var, self.target_var],
+            [self.test_loss, self.test_acc]
+        )
+
         return None
 
-    def train(self, TRAINING, VALIDATION, epochs=500, batchsize=500, augmented=True, everyn=150, thresh=25):
-        if augmented:
-            Xtr, ytr = augment(TRAINING)
-            print('Ntrials =', len(ytr))
-        else:
-            Xtr, ytr = TRAINING
-        Xva, yva = VALIDATION
-        tr_nll_trace = np.zeros(epochs)
-        val_nll_trace = np.zeros(epochs)
-        val_acc_trace = np.zeros(epochs)
-        traces = (tr_nll_trace, val_nll_trace, val_acc_trace)
-
-        self.last_epoch = 0
-        tr_start = time.time()
-
-        for epoch in range(epochs):
-            tr_err = 0
-            tr_bats = 0
-            epoch_start = time.time()
-
-            for bat in iterate_minibatches(Xtr, ytr, batchsize=batchsize, shuffle=True):
-                inputs, targets = bat
-                tr_err += self.train_fn(inputs, targets)
-                tr_bats += 1
-
-            val_err = 0
-            val_acc = 0
-            val_bats = 0
-
-            for bat in iterate_minibatches(Xva, yva, batchsize=batchsize, shuffle=False):
-                inputs, targets = bat
-                err, acc = self.val_fn(inputs, targets)
-                val_err += err
-                val_acc += acc
-                val_bats += 1
-
-            tr_nll_trace[epoch] = tr_err / tr_bats
-            val_nll_trace[epoch] = val_err / val_bats
-            val_acc_trace[epoch] = val_acc / val_bats * 100
-
-            # early stop
-            self.last_epoch = epoch
-            delta_val_nll = np.diff(val_nll_trace)
-            if epoch > 25:
-                if delta_val_nll[epoch-thresh:epoch].mean() > 0:
-                    print('Validation error stopped decreasing...')
-                    print('Abandon ship!')
-                    break
-            if epoch % everyn == 0:
-                print("Epoch {} of {} took {:.3f}s".format(
-                        epoch+1, epochs, time.time() - epoch_start))
-                print("  training loss:\t\t{:.4f}".format(tr_err / tr_bats))
-                print("  validation loss:\t\t{:.4f}".format(val_err / val_bats))
-                print("  validation accuracy:\t\t{:.2f}".format(val_acc / val_bats * 100))
-                print("  total time elapsed:\t\t{:.3f}s".format(time.time() - tr_start))
-
-        return (tr_err, val_err), (tr_nll_trace, val_nll_trace, val_acc_trace)
-
-    def test(self, TEST, batchsize=500):
-        Xte, yte = TEST
-        self.test_nll = 0
-        self.test_acc = 0
-        test_bats = 0
-
-        for bat in iterate_minibatches(Xte, yte, batchsize, shuffle=False):
-            inputs, targets = bat
-            err, acc = self.val_fn(inputs, targets)
-            self.test_nll += err
-            self.test_acc += acc
-            test_bats += 1
-
-        print("Final results:")
-        print("  Stopped in epoch:\t\t\t{}".format(self.last_epoch+1))
-        print("  test loss:\t\t\t{:.6f}".format(self.test_nll / test_bats))
-        print("  test accuracy:\t\t{:.2f} %".format(self.test_acc / test_bats * 100))
-
-        return self.test_nll/test_bats, self.test_acc / test_bats
+    def update_traces(self):
+        """
+        Saves traces for plotting
+        """
+        self.val_trace[self.trace_loc] = self.val_err
+        self.train_trace[self.trace_loc] = self.train_err
+        self.trace_loc += 1
+        return None
 
     def save_params(self, param_file):
-        self.param_vals = lasagne.layers.get_all_param_values(self.network)
-        np.savez(param_file, *self.param_vals)
+        """
+        Save parameters for reuse later
+        """
+        all_params = L.layers.get_all_param_values(self.net)
+        np.savez(param_file, *all_params)
         return None
 
     def load_params(self, param_file):
-        self.param_vals = np.load(param_file)
+        """
+        Load params from saved file
+        """
         with np.load(param_file) as loaded:
-            lasagne.layers.set_all_param_values(self.network, [i[1] for i in loaded.items()])
+            L.layers.set_all_param_values(self.net, [i[1] for i in loaded.items()])
         return None
