@@ -17,7 +17,8 @@ class Network():
         self.target_var = T.ivector('targets')
         self.update_algo = L.updates.adam
         self.build()
-        self.make_objectives()
+        self.objectives()
+        self.compile_functions()
         self.val_trace = np.zeros(5000)
         self.train_trace = np.zeros(5000)
         self.trace_loc = 0
@@ -27,10 +28,9 @@ class Network():
         self.prediction = get_output(self.net)
         self.test_prediction = get_output(self.net, deterministic=True)
         self.params = get_all_params(self.net, trainable=True)
-        self.output_fn = theano.function([self.input_var], self.test_prediction)
         return None
 
-    def make_objectives(self):
+    def objectives(self):
         self.loss = cross_entropy(self.prediction, self.target_var)
         self.loss = self.loss.mean()
         self.test_loss = cross_entropy(self.test_prediction, self.target_var)
@@ -40,7 +40,11 @@ class Network():
             dtype=theano.config.floatX
         )
 
+        return None
+
+    def compile_functions(self):
         self.updates = self.update_algo(self.loss, self.params)
+        self.output_fn = theano.function([self.input_var], self.test_prediction)
         self.train_fn = theano.function(
             [self.input_var, self.target_var], self.loss,
             updates=self.updates
