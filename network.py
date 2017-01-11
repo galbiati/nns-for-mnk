@@ -8,7 +8,13 @@ from util import *
 from archs import *
 from load_data import *
 
+def softmax_safe_ce(x, y):
+    xtemp = x - x.max(1, keepdims=True)
+    lsm = xtemp - T.log(T.sum(T.exp(xtemp), axis=1, keepdims=True))
+    return T.sum(y*lsm, axis=1)
+
 class MNKNet():
+    # todo: move datafile into load data
     def __init__(self, arch, datafile):
         self.datafile = datafile
         self.arch = arch
@@ -21,16 +27,17 @@ class MNKNet():
         self.target_var = T.ivector('targets')
         self.network = self.arch(self.input_var)
         self.prediction = lasagne.layers.get_output(self.network)
+        # l2penalty = lasagne.regularization.regularize_network_params(self.network, lambda x: .5*lasagne.regularization.l2(x))
         self.loss = lasagne.objectives.categorical_crossentropy(self.prediction, self.target_var)
-        self.loss = self.loss.mean()
+        self.loss = self.loss.mean() #+ l2penalty
         self.test_prediction = lasagne.layers.get_output(self.network, deterministic=True)
         self.test_loss = lasagne.objectives.categorical_crossentropy(self.test_prediction, self.target_var)
         self.test_loss = self.test_loss.mean()
         self.test_acc = T.mean(T.eq(T.argmax(self.test_prediction, axis=1), self.target_var),
                                 dtype=theano.config.floatX)
         self.params = lasagne.layers.get_all_params(self.network, trainable=True)
-        self.updates = lasagne.updates.nesterov_momentum(self.loss, self.params,
-                                                                learning_rate=.01, momentum=.9)
+        self.updates = lasagne.updates.adam(self.loss, self.params, learning_rate=.001)
+        #lasagne.updates.nesterov_momentum(self.loss, self.params, learning_rate=.01, momentum=.9)
         self.train_fn = theano.function([self.input_var, self.target_var], self.loss, updates=self.updates)
         self.val_fn = theano.function([self.input_var, self.target_var], [self.test_loss, self.test_acc])
         self.output_fn = theano.function([self.input_var], self.test_prediction)
@@ -127,5 +134,6 @@ class MNKNet():
 
     def load_params(self, param_file):
         self.param_vals = np.load(param_file)
-        lasagne.layers.set_all_param_values(self.network, [pars[arr] for arr in pars.files])
+        with np.load(param_file) as loaded:
+            lasagne.layers.set_all_param_values(self.network, [i[1] for i in loaded.items()])
         return None

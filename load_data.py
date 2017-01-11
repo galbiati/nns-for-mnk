@@ -9,8 +9,8 @@ import pandas as pd
 
 def load_dataset(filename):
     columns = ['subject', 'color', 'bp', 'wp', 'response', 'rt']
-    datatypes = [('subject', 'i4'), ('color', 'i4'), 
-                 ('bp', 'S36'), ('wp', 'S36'), 
+    datatypes = [('subject', 'i4'), ('color', 'i4'),
+                 ('bp', 'S36'), ('wp', 'S36'),
                  ('response', 'i4'), ('rt', 'i4')]
     data = np.loadtxt(filename, delimiter=',', dtype=datatypes)
     data = pd.DataFrame.from_records(data)
@@ -40,7 +40,7 @@ def split_dataset(data, splitsize=5):
     for subject in data.subject.unique():
         subject_idx = np.random.permutation(np.where(S==subject)[0])
         N_moves = subject_idx.shape[0]
-        cut_size = N_moves//splitsize 
+        cut_size = N_moves//splitsize
 
         for s in range(splitsize-1):
             splits[s].append(subject_idx[slice(s*cut_size, (s+1)*cut_size)])
@@ -65,12 +65,12 @@ def augment(D):
 
     return X, y
 
-def CV_loader(filename):
+def CV_loader(filename, norm_input=False):
     splitsize = 5
-    
+
     columns = ['subject', 'color', 'bp', 'wp', 'response', 'rt', 'splitg']
     datatypes = [
-        ('subject', 'i4'), ('color', 'i4'), ('bp', 'S36'), ('wp', 'S36'), 
+        ('subject', 'i4'), ('color', 'i4'), ('bp', 'S36'), ('wp', 'S36'),
         ('response', 'i4'), ('rt', 'i4'), ('splitg', 'i4')
     ]
     data = np.loadtxt(filename, delimiter=',', dtype=datatypes)
@@ -80,13 +80,17 @@ def CV_loader(filename):
     data.loc[:, 'wp'] = data.loc[:, 'wp'].map(decoder)
     data.loc[data.color==1, ['bp', 'wp']] = data.loc[data.color==1, ['wp', 'bp']].values
     data = data.reset_index(drop=True)
-    
+
     decoder = lambda x: np.array(list(x)).astype(int).reshape([4,9])
     bp = np.array(list(map(decoder, data.loc[:, 'bp'].values)))
     wp = np.array(list(map(decoder, data.loc[:, 'wp'].values)))
     X = np.zeros([bp.shape[0], 2, bp.shape[1], bp.shape[2]])
     X[:, 0, :, :] = bp
     X[:, 1, :, :] = wp
+    if norm_input:
+        # X = X / X.sum(axis=(1,2,3), keepdims=True)
+        X = X - X.mean(axis=0, keepdims=True)
+        X = X / X.std(axis=0, keepdims=True)
     y = data.loc[:, 'response'].values
     S = data.loc[:, 'subject'].values
 
@@ -95,5 +99,5 @@ def CV_loader(filename):
     Xsplits = [X[s, :, :, :] for s in splits]
     ysplits = [y[s] for s in splits]
     Ssplits = [S[s] for s in splits]
-    
+
     return data, splits, Xsplits, ysplits, Ssplits, splitsize
