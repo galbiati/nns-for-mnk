@@ -6,6 +6,7 @@ T = theano.tensor
 get_output = L.layers.get_output
 get_all_params = L.layers.get_all_params
 cross_entropy = L.objectives.categorical_crossentropy
+get_layers = L.layers.get_all_layers
 
 class Network(object):
     """
@@ -28,6 +29,8 @@ class Network(object):
         self.prediction = get_output(self.net)
         self.test_prediction = get_output(self.net, deterministic=True)
         self.params = get_all_params(self.net, trainable=True)
+        self.value_layer = get_all_layers(self.net)[-3]
+        self.value_prediction = get_output(self.value_layer)
         return None
 
     def objectives(self):
@@ -45,6 +48,7 @@ class Network(object):
     def compile_functions(self):
         self.updates = self.update_algo(self.loss, self.params)
         self.output_fn = theano.function([self.input_var], self.test_prediction)
+        self.value_fn = thenao.function([self.input_var], self.value_prediction)
         self.train_fn = theano.function(
             [self.input_var, self.target_var], self.loss,
             updates=self.updates

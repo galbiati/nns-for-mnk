@@ -120,6 +120,9 @@ class DefaultTrainer(Trainer):
     implementing a basic train_all function that does random cv splits rather
     than premade...
 
+    self.train_all may be further decomposable -
+    eg separate "unpack data" function...
+
     Automatic parameter saving to be implemented later...
     """
     def train_all(self, architecture, data, seed=None, save_params=False):
