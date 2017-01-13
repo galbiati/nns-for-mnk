@@ -11,9 +11,13 @@ def make_FixLayer(input_var):
             corrector = (1 - input_var.sum(axis=1))
             corrector = corrector.reshape((input_var.shape[0], 36))
             numer = input * corrector
-            return numer / numer.sum(axis=1).dimshuffle((0, 'x'))
+            return numer
 
     return FixLayer
+
+class ReNormLayer(L.Layer):
+    def get_output_for(self, input, **kwargs):
+        return input / input.sum(axis=1).dimshuffle((0, 'x'))
 
 def default_network(nfil=32, input_var=None):
     """Theano graph for basic convnet WITH legal move filter"""

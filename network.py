@@ -29,7 +29,7 @@ class Network(object):
         self.prediction = get_output(self.net)
         self.test_prediction = get_output(self.net, deterministic=True)
         self.params = get_all_params(self.net, trainable=True)
-        self.value_layer = get_all_layers(self.net)[-3]
+        self.value_layer = get_layers(self.net)[-4]
         self.value_prediction = get_output(self.value_layer)
         return None
 
@@ -48,7 +48,7 @@ class Network(object):
     def compile_functions(self):
         self.updates = self.update_algo(self.loss, self.params)
         self.output_fn = theano.function([self.input_var], self.test_prediction)
-        self.value_fn = thenao.function([self.input_var], self.value_prediction)
+        self.value_fn = theano.function([self.input_var], self.value_prediction)
         self.train_fn = theano.function(
             [self.input_var, self.target_var], self.loss,
             updates=self.updates
