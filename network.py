@@ -7,7 +7,7 @@ get_output = L.layers.get_output
 get_all_params = L.layers.get_all_params
 cross_entropy = L.objectives.categorical_crossentropy
 
-class Network():
+class Network(object):
     """
     Base for subclassing networks for MNK
     """
@@ -15,7 +15,7 @@ class Network():
         self.architecture = architecture
         self.input_var = T.tensor4('inputs')
         self.target_var = T.ivector('targets')
-        self.update_algo = L.updates.adam
+        self.update_algo = L.updates.adam # just a default
         self.build()
         self.objectives()
         self.compile_functions()
@@ -63,6 +63,14 @@ class Network():
         self.val_trace[self.trace_loc] = self.val_err
         self.train_trace[self.trace_loc] = self.train_err
         self.trace_loc += 1
+        return None
+
+    def freeze_params(self, layer):
+        """
+        Sets params of layer to be untrainable
+        May want to make layer a list or flexible type
+        Todo!
+        """
         return None
 
     def save_params(self, param_file):

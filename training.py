@@ -11,7 +11,8 @@ class Trainer(object):
     """
     Base for subclassing optimizers
     """
-    def __init__(self, batchsize=128, updates=L.updates.adam, update_args={}):
+    def __init__(self, batchsize=128, stopthresh=100,
+        updates=L.updates.adam, update_args={}):
         """
         Move relevant items into arguments later
         Fix updates to get set on network
@@ -20,7 +21,8 @@ class Trainer(object):
         self.bs = batchsize
         self.epoch = 0
         self.max_epoch = 5000
-        self.stopthresh = 100
+        self.stopthresh = stopthresh
+        self.update_args = update_args
 
     def train(self, network, training_data, validation_data, print_interval=50):
         """
@@ -28,7 +30,7 @@ class Trainer(object):
         It might be better to abstract the training and validation loops into
         their own functions, but not a priority for now
         """
-
+        network.updates = self.updates(network.loss, network.params, **self.update_args)
         X, y = training_data
         Xv, yv = validation_data
         self.train_start = time.time()
@@ -92,7 +94,7 @@ class Trainer(object):
         print("TEST PERFORMANCE")
         print("\tStopped in epoch:\t\t{}".format(self.epoch))
         print("\tTest loss:\t\t\t{:.4f}".format(test_err/test_bats))
-        print("\tTest accuracy:\t\t\t{:.2f}".format(100*test_acc/test_bats))
+        print("\tTest accuracy:\t\t\t{:.2f}%".format(100*test_acc/test_bats))
 
         return test_err, test_acc, test_bats
 
