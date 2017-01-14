@@ -160,3 +160,46 @@ class DefaultTrainer(Trainer):
         print("\tTotal time:\t\t{:.2f}".format(time_elapsed))
 
         return net_list
+
+class FineTuner(DefaultTrainer):
+    """
+    Trainer to fine tune networks to individual subjects
+
+    Consider moving freeze, param set functions properly into Network object
+    Abstracting split functions and augment in DefaultTrainer would be good too
+    """
+
+    def train_all(self, architecture, data, split=0, seed=None, startparams=None, freeze=True, save_params=False):
+        from network import Network # remove hah
+        if seed:
+            np.random.seed(seed)
+
+        D, groups, Xs, ys, Ss = data
+        num_splits = len(Xs)
+        r = np.tile(np.arange(num_splits), [num_splits, 1])
+        r = (r + r.T) % num_splits
+
+        starttime = time.time()
+        net = Network(architecture)
+        if startparams:
+            L.layers.set_all_param_values(net.net, startparams)
+            convlayer, prelulayer = L.layers.get_all_layers(net.net)[1:3]
+            if freeze:
+                convlayer.params[convlayer.W].remove('trainable')
+                convlayer.params[convlayer.b].remove('trainable')
+                prelulayer.params[prelulayer.alpha].remove('trainable')
+
+        train_idxs = r[split, :3]
+        val_idxs = r[split, 3:4]
+        test_idxs = r[split, 4:]
+
+        X, y, S = [np.concatenate(np.array(Z)[train_idxs]) for Z in [Xs, ys, Ss]]
+        Xv, yv, Sv = [np.concatenate(np.array(Z)[val_idxs]) for Z in [Xs, ys, Ss]]
+        Xt, yt, St = [np.concatenate(np.array(Z)[test_idxs]) for Z in [Xs, ys, Ss]]
+        X, y = augment((X, y))
+        S = np.concatenate([S, S, S, S])
+        self.train(net, training_data=(X, y), validation_data=(Xv, yv))
+        self.test(net, testing_data=(Xt, yt))
+        time_elapsed = time.time() - starttime
+
+        return net

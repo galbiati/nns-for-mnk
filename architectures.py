@@ -19,36 +19,29 @@ class ReNormLayer(L.Layer):
     def get_output_for(self, input, **kwargs):
         return input / input.sum(axis=1).dimshuffle((0, 'x'))
 
-def default_network(nfil=32, input_var=None):
-    """Theano graph for basic convnet WITH legal move filter"""
-    input_shape=(None, 2, 4, 9)
+def default_convnet(input_var=None):
+    input_shape = (None, 2, 4, 9)
     FixLayer = make_FixLayer(input_var)
 
     input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
-
     network = L.Conv2DLayer(
-        input_layer,
-        num_filters=nfil, filter_size=(4,4), pad='full',
-        nonlinearity=nl.rectify,
-        W=lasagne.init.GlorotUniform()
-    )
-
-    network = L.DropoutLayer(network, p=.75)
-
-    network = L.DenseLayer(
-        network,
-        num_units=36,
+        input_layer, num_filters=32, filter_size=(4,4), pad='full',
         nonlinearity=nl.identity
     )
 
-    network = L.NonlinearityLayer(
-        network,
-        nonlinearity=nl.softmax
+    network = L.ParametricRectifierLayer(network, shared_axes='auto') # default: auto
+    network = L.FeaturePoolLayer(network, pool_function=T.sum, pool_size=2) # default: T.sum, 2
+    network = L.DropoutLayer(network, p=.75) # default: .75
+    network = L.DenseLayer(
+        network, num_units=36,
+        nonlinearity=nl.very_leaky_rectify, W=lasagne.init.HeUniform(gain='relu')
     )
-
     network = FixLayer(network)
+    network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
+    network = FixLayer(network)
+    network = ReNormLayer(network)
 
     return network
-
+    
 def default_autoencoder():
     pass
