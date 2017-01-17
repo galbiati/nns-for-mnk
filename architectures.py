@@ -30,7 +30,7 @@ def default_convnet(input_var=None):
     )
 
     network = L.ParametricRectifierLayer(network, shared_axes='auto') # default: auto
-    network = L.FeaturePoolLayer(network, pool_function=T.sum, pool_size=2) # default: T.sum, 2
+    network = L.FeaturePoolLayer(network, pool_function=T.sum, pool_size=4) # default: T.sum, 2
     network = L.DropoutLayer(network, p=.75) # default: .75
     network = L.DenseLayer(
         network, num_units=36,
@@ -42,6 +42,6 @@ def default_convnet(input_var=None):
     network = ReNormLayer(network)
 
     return network
-    
+
 def default_autoencoder():
     pass

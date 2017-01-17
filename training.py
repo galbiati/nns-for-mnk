@@ -4,6 +4,7 @@ import lasagne as L
 import time
 from scipy.stats import bayes_mvs as bmvs
 from loading import augment
+from network import Network
 
 T = theano.tensor
 
@@ -63,7 +64,7 @@ class Trainer(object):
 
             self.epoch = epoch
             del_val_err = np.diff(network.val_trace)
-            if epoch > 25:
+            if epoch > self.stopthresh:
                 if del_val_err[epoch-self.stopthresh:epoch].mean() > 0:
                     print("Abandon ship!")
                     break
@@ -125,32 +126,40 @@ class DefaultTrainer(Trainer):
 
     Automatic parameter saving to be implemented later...
     """
-    def train_all(self, architecture, data, seed=None, save_params=False):
-        net_list = []
-        from network import Network
-        if seed:
-            np.random.seed(seed)
 
+    def run_split(self, architecture, data, split, augment_fn):
         D, groups, Xs, ys, Ss = data
         num_splits = len(Xs)
         r = np.tile(np.arange(num_splits), [num_splits, 1])
         r = (r + r.T) % num_splits
 
-        starttime = time.time()
-        for split in range(num_splits):
-            net = Network(architecture)
-            net_list.append(net)
-            train_idxs = r[split, :3]
-            val_idxs = r[split, 3:4]
-            test_idxs = r[split, 4:]
+        net = Network(architecture)
+        train_idxs = r[split, :3]
+        val_idxs = r[split, 3:4]
+        test_idxs = r[split, 4:]
 
-            X, y, S = [np.concatenate(np.array(Z)[train_idxs]) for Z in [Xs, ys, Ss]]
-            Xv, yv, Sv = [np.concatenate(np.array(Z)[val_idxs]) for Z in [Xs, ys, Ss]]
-            Xt, yt, St = [np.concatenate(np.array(Z)[test_idxs]) for Z in [Xs, ys, Ss]]
-            X, y = augment((X, y))
-            S = np.concatenate([S, S, S, S])
-            self.train(net, training_data=(X, y), validation_data=(Xv, yv))
-            self.test(net, testing_data=(Xt, yt))
+        X, y, S = [np.concatenate(np.array(Z)[train_idxs]) for Z in [Xs, ys, Ss]]
+        Xv, yv, Sv = [np.concatenate(np.array(Z)[val_idxs]) for Z in [Xs, ys, Ss]]
+        Xt, yt, St = [np.concatenate(np.array(Z)[test_idxs]) for Z in [Xs, ys, Ss]]
+        X, y = augment_fn((X, y))
+        S = np.concatenate([S, S, S, S])
+        print(Xt.shape)
+
+        self.train(net, training_data=(X, y), validation_data=(Xv, yv))
+        self.test(net, testing_data=(Xt, yt))
+
+        return net
+
+    def train_all(self, architecture, data, seed=None, save_params=False, augment_fn=augment):
+        net_list = []
+        if seed:
+            np.random.seed(seed)
+
+        starttime = time.time()
+        num_splits = len(data[2])
+        for split in range(num_splits):
+            net = self.run_split(architecture, data, split, augment_fn)
+            net_list.append(net)
 
         mvs = bmvs([n.test_err for n in net_list ], alpha=.95)
         time_elapsed = time.time() - starttime
@@ -169,8 +178,7 @@ class FineTuner(DefaultTrainer):
     Abstracting split functions and augment in DefaultTrainer would be good too
     """
 
-    def train_all(self, architecture, data, split=0, seed=None, startparams=None, freeze=True, save_params=False):
-        from network import Network # remove hah
+    def train_all(self, architecture, data, split, seed=None, startparams=None, freeze=True, save_params=False):
         if seed:
             np.random.seed(seed)
 
@@ -182,8 +190,9 @@ class FineTuner(DefaultTrainer):
         starttime = time.time()
         net = Network(architecture)
         if startparams:
-            L.layers.set_all_param_values(net.net, startparams)
-            convlayer, prelulayer = L.layers.get_all_layers(net.net)[1:3]
+            _layers = L.layers.get_all_layers(net.net)[1:3]
+            L.layers.set_all_param_values(_layers, startparams[1:3])
+            convlayer, prelulayer = _layers
             if freeze:
                 convlayer.params[convlayer.W].remove('trainable')
                 convlayer.params[convlayer.b].remove('trainable')

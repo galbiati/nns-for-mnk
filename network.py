@@ -36,8 +36,8 @@ class Network(object):
     def objectives(self):
         self.loss = cross_entropy(self.prediction, self.target_var)
         self.loss = self.loss.mean()
-        self.test_loss = cross_entropy(self.test_prediction, self.target_var)
-        self.test_loss = self.test_loss.mean()
+        self.itemized_loss = cross_entropy(self.test_prediction, self.target_var)
+        self.test_loss = self.itemized_loss.mean()
         self.test_acc = T.mean(
             T.eq(T.argmax(self.test_prediction, axis=1), self.target_var),
             dtype=theano.config.floatX
@@ -56,6 +56,10 @@ class Network(object):
         self.test_fn = theano.function(
             [self.input_var, self.target_var],
             [self.test_loss, self.test_acc]
+        )
+        self.itemized_test_fn = theano.function(
+            [self.input_var, self.target_var],
+            self.itemized_loss
         )
 
         return None
@@ -85,10 +89,10 @@ class Network(object):
         np.savez(param_file, *all_params)
         return None
 
-    def load_params(self, param_file):
-        """
-        Load params from saved file
-        """
-        with np.load(param_file) as loaded:
-            L.layers.set_all_param_values(self.net, [i[1] for i in loaded.items()])
+    def load_params(self, paramsfile):
+        with np.load(paramsfile) as loaded:
+            params_list = [(i[0], i[1]) for i in loaded.items()]
+            params_list.sort()
+            L.set_all_param_values(self.net, [i[1] for i in params_list])
+
         return None
