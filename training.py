@@ -92,7 +92,7 @@ class Trainer(object):
             test_bats += 1
 
         network.test_err = test_err/test_bats
-        print("TEST PERFORMANCE")
+        print("\nTEST PERFORMANCE")
         print("\tStopped in epoch:\t\t{}".format(self.epoch))
         print("\tTest loss:\t\t\t{:.4f}".format(test_err/test_bats))
         print("\tTest accuracy:\t\t\t{:.2f}%".format(100*test_acc/test_bats))
@@ -128,6 +128,7 @@ class DefaultTrainer(Trainer):
     """
 
     def run_split(self, architecture, data, split, augment_fn):
+        print("\nSplit Number {}".format(split))
         D, groups, Xs, ys, Ss = data
         num_splits = len(Xs)
         r = np.tile(np.arange(num_splits), [num_splits, 1])
@@ -163,7 +164,7 @@ class DefaultTrainer(Trainer):
 
         mvs = bmvs([n.test_err for n in net_list ], alpha=.95)
         time_elapsed = time.time() - starttime
-        print("OVERALL RESULTS")
+        print("\n\nOVERALL RESULTS")
         print("\tAverage NLL:\t\t{:.3f}".format(mvs[0][0]))
         print("\tCred. Interval:\t\t[{:.3f}, {:.3f}]".format(mvs[0][1][0], mvs[0][1][1]))
         print("\tTotal time:\t\t{:.2f}".format(time_elapsed))
@@ -191,7 +192,7 @@ class FineTuner(DefaultTrainer):
         net = Network(architecture)
         if startparams:
             _layers = L.layers.get_all_layers(net.net)[1:3]
-            L.layers.set_all_param_values(_layers, startparams[1:3])
+            L.layers.set_all_param_values(_layers, startparams[0:3])
             convlayer, prelulayer = _layers
             if freeze:
                 convlayer.params[convlayer.W].remove('trainable')

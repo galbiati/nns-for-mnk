@@ -93,6 +93,6 @@ class Network(object):
         with np.load(paramsfile) as loaded:
             params_list = [(i[0], i[1]) for i in loaded.items()]
             params_list.sort()
-            L.set_all_param_values(self.net, [i[1] for i in params_list])
+            L.layers.set_all_param_values(self.net, [i[1] for i in params_list])
 
         return None
