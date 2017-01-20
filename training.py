@@ -191,9 +191,9 @@ class FineTuner(DefaultTrainer):
         starttime = time.time()
         net = Network(architecture)
         if startparams:
-            _layers = L.layers.get_all_layers(net.net)[1:3]
-            L.layers.set_all_param_values(_layers, startparams[0:3])
-            convlayer, prelulayer = _layers
+            _layers = L.layers.get_all_layers(net.net)
+            L.layers.set_all_param_values(_layers, startparams)
+            convlayer, prelulayer = _layers[1:3]
             if freeze:
                 convlayer.params[convlayer.W].remove('trainable')
                 convlayer.params[convlayer.b].remove('trainable')
