@@ -95,7 +95,7 @@ class Trainer(object):
         print("\nTEST PERFORMANCE")
         print("\tStopped in epoch:\t\t{}".format(self.epoch))
         print("\tTest loss:\t\t\t{:.4f}".format(test_err/test_bats))
-        print("\tTest accuracy:\t\t\t{:.2f}%".format(100*test_acc/test_bats))
+        print("\tTest accuracy:\t\t\t{:.2f}%\n".format(100*test_acc/test_bats))
 
         return test_err, test_acc, test_bats
 
