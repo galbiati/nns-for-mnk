@@ -2,7 +2,7 @@
 
 Requires: Python 3.x, pandas, numpy, Theano, lasagne
 
-Prototyping.ipynb is where you can find usage examples.
+Usage examples are in notebooks and run_fit.py.
 
 architecures.py contains custom layers and functions that define architectures for different networks.
 
