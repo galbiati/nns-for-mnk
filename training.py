@@ -12,7 +12,7 @@ class Trainer(object):
     """
     Base for subclassing optimizers
     """
-    def __init__(self, batchsize=128, stopthresh=100,
+    def __init__(self, batchsize=128, stopthresh=100, print_interval=50,
         updates=L.updates.adam, update_args={}):
         """
         Move relevant items into arguments later
@@ -23,9 +23,10 @@ class Trainer(object):
         self.epoch = 0
         self.max_epoch = 5000
         self.stopthresh = stopthresh
+        self.print_interval = print_interval
         self.update_args = update_args
 
-    def train(self, network, training_data, validation_data, print_interval=50):
+    def train(self, network, training_data, validation_data):
         """
         Training and validation
         It might be better to abstract the training and validation loops into
@@ -69,7 +70,7 @@ class Trainer(object):
                     print("Abandon ship!")
                     break
 
-            if epoch % print_interval == 0:
+            if epoch % self.print_interval == 0:
                 print("Epoch {} took {:.3f}s".format(epoch, epoch_dur))
                 print("\ttraining loss:\t\t\t{:.4f}".format(train_err/train_bats))
                 print("\tvalidation loss:\t\t{:.4f}".format(val_err/val_bats))
@@ -193,11 +194,12 @@ class FineTuner(DefaultTrainer):
         if startparams:
             _layers = L.layers.get_all_layers(net.net)
             L.layers.set_all_param_values(_layers, startparams)
-            convlayer, prelulayer = _layers[1:3]
+            # convlayer, prelulayer = _layers[1:3]
             if freeze:
-                convlayer.params[convlayer.W].remove('trainable')
-                convlayer.params[convlayer.b].remove('trainable')
-                prelulayer.params[prelulayer.alpha].remove('trainable')
+                net.freeze_params()
+                # convlayer.params[convlayer.W].remove('trainable')
+                # convlayer.params[convlayer.b].remove('trainable')
+                # prelulayer.params[prelulayer.alpha].remove('trainable')
 
         train_idxs = r[split, :3]
         val_idxs = r[split, 3:4]

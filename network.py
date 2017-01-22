@@ -73,12 +73,20 @@ class Network(object):
         self.trace_loc += 1
         return None
 
-    def freeze_params(self, layer):
+    def freeze_params(self, exclude=None):
         """
         Sets params of layer to be untrainable
         May want to make layer a list or flexible type
         Todo!
         """
+        layers = get_layers(self.net)
+        if exclude:
+            layers = [layer for layer in layers if not (layer in exclude)]
+
+        for layer in layers:
+            for param in layer.params:
+                layer.params[param].remove('trainable')
+
         return None
 
     def save_params(self, param_file):
@@ -92,7 +100,8 @@ class Network(object):
     def load_params(self, paramsfile):
         with np.load(paramsfile) as loaded:
             params_list = [(i[0], i[1]) for i in loaded.items()]
-            params_list.sort()
+            params_order = np.array([i[0][4:6] for i in params_list]).astype(int)
+            params_list = [params_list[i] for i in params_order.argsort()]
             L.layers.set_all_param_values(self.net, [i[1] for i in params_list])
 
         return None
