@@ -20,11 +20,14 @@ class Network(object):
         self.build()
         self.objectives()
         self.compile_functions()
-        self.val_trace = np.zeros(5000)
-        self.train_trace = np.zeros(5000)
+        self.val_trace = np.zeros(500)
+        self.train_trace = np.zeros(500)
         self.trace_loc = 0
 
     def build(self):
+        """
+        Generates network graph, grabs params and output symbols
+        """
         self.net = self.architecture(self.input_var)
         self.prediction = get_output(self.net)
         self.test_prediction = get_output(self.net, deterministic=True)
@@ -34,6 +37,9 @@ class Network(object):
         return None
 
     def objectives(self):
+        """
+        Adds loss and accuracy nodes
+        """
         self.loss = cross_entropy(self.prediction, self.target_var)
         self.loss = self.loss.mean()
         self.itemized_loss = cross_entropy(self.test_prediction, self.target_var)
@@ -46,6 +52,9 @@ class Network(object):
         return None
 
     def compile_functions(self):
+        """
+        Compiles theano functions for computing output, losses, etc
+        """
         self.updates = self.update_algo(self.loss, self.params)
         self.output_fn = theano.function([self.input_var], self.test_prediction)
         self.value_fn = theano.function([self.input_var], self.value_prediction)
@@ -70,14 +79,13 @@ class Network(object):
         """
         self.val_trace[self.trace_loc] = self.val_err
         self.train_trace[self.trace_loc] = self.train_err
-        self.trace_loc += 1
+        self.trace_loc += 1 # so hacky
         return None
 
     def freeze_params(self, exclude=None):
         """
         Sets params of layer to be untrainable
-        May want to make layer a list or flexible type
-        Todo!
+        Excludes layers in optional arg exclude (tuple or list)
         """
         layers = get_layers(self.net)
         if exclude:
@@ -98,6 +106,9 @@ class Network(object):
         return None
 
     def load_params(self, paramsfile):
+        """
+        Loads parameters from npz files
+        """
         with np.load(paramsfile) as loaded:
             params_list = [(i[0], i[1]) for i in loaded.items()]
             params_order = np.array([i[0][4:6] for i in params_list]).astype(int)
