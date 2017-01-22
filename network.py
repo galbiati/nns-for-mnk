@@ -84,12 +84,12 @@ class Network(object):
 
     def freeze_params(self, exclude=None):
         """
-        Sets params of layer to be untrainable
+        Sets params to be untrainable
         Excludes layers in optional arg exclude (tuple or list)
         """
         layers = get_layers(self.net)
         if exclude:
-            layers = [layer for layer in layers if not (layer in exclude)]
+            layers = [layer for l, layer in enumerate(layers) if not (l in exclude)]
 
         for layer in layers:
             for param in layer.params:
