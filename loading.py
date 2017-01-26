@@ -49,11 +49,13 @@ def augment(D):
 
     return X, y
 
-def default_loader(filename):
+def default_loader(filename, subject=None):
     """
     Loads data into 5 cross-validation groups as listed in datafilede
     """
     F = read_datafile(filename)
+    if subject is not None:
+        F = F.loc[F['subject'] == subject, :]
     X, y, S, G, Np = unpack_data(F)
 
     groups = [np.where(G==g)[0] for g in np.arange(5)]
