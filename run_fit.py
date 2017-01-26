@@ -30,36 +30,5 @@ Xs = np.concatenate(hvhdata[2])
 ys = np.concatenate(hvhdata[3])
 Ss = np.concatenate(hvhdata[4])
 
-# fit function
-def run_full_fit(arch, archname):
-    """
-    Runs the full fitting experiment,
-    pretraining on later experiments and testing on first.
-
-    Saves data as it goes to avoid eating memory.
-    """
-
-    # start training
-    trainer = DefaultTrainer(stopthresh=75, print_interval=20)
-    net_list = trainer.train_all(architecture=arch, data=data, seed=985227)
-
-    # save params
-    for i, n in enumerate(net_list):
-        fname = '{} {} split agg fit exp 1-4'.format(archname, i)
-        n.save_params(os.path.join(paramsdir, fname))
-
-    tuner = FineTuner(stopthresh=20)
-    for i, n in enumerate(net_list):
-        for j in range(5):
-            fname = '{} {} agg fit exp 1-4 {} tune fit exp 0'.format(archname, i, j)
-            params = L.get_all_param_values(n.net)
-            net = tuner.train_all(
-                architecture=arch, data=hvhdata,
-                split=j, startparams=params, freeze=True
-            )
-            net.save_params(os.path.join(paramsdir, fname))
-
-    return None
-
 if __name__ == '__main__':
     run_full_fit(multiconvX, 'multiconvX_lrg')
