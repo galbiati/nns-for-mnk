@@ -13,7 +13,7 @@ class Trainer(object):
     Base for subclassing optimizers
     """
     def __init__(self, batchsize=128, stopthresh=100, print_interval=50,
-        updates=L.updates.adam, update_args={}):
+                updates=L.updates.adam, update_args={}, seed=None):
         """
         Move relevant items into arguments later
         Fix updates to get set on network
@@ -25,6 +25,9 @@ class Trainer(object):
         self.stopthresh = stopthresh
         self.print_interval = print_interval
         self.update_args = update_args
+        self.seed = seed
+        if self.seed is not None:
+            np.random.seed(self.seed)
 
     def train(self, network, training_data, validation_data):
         """
@@ -180,7 +183,8 @@ class FineTuner(DefaultTrainer):
     Abstracting split functions and augment in DefaultTrainer would be good too
     """
 
-    def train_all(self, architecture, data, split, seed=None, startparams=None, freeze=True, save_params=False):
+    def train_all(self, architecture, data, split, seed=None,
+                    startparams=None, freeze=True, exclude=[-4]):
         if seed:
             np.random.seed(seed)
 
@@ -196,7 +200,7 @@ class FineTuner(DefaultTrainer):
             L.layers.set_all_param_values(_layers, startparams)
             # convlayer, prelulayer = _layers[1:3]
             if freeze:
-                net.freeze_params()
+                net.freeze_params(exclude=exclude)
                 # convlayer.params[convlayer.W].remove('trainable')
                 # convlayer.params[convlayer.b].remove('trainable')
                 # prelulayer.params[prelulayer.alpha].remove('trainable')
@@ -215,3 +219,33 @@ class FineTuner(DefaultTrainer):
         time_elapsed = time.time() - starttime
 
         return net
+
+def run_full_fit(arch, archname):
+    """
+    Runs the full fitting experiment,
+    pretraining on later experiments and testing on first.
+
+    Saves data as it goes to avoid eating memory.
+    """
+
+    # start training
+    trainer = DefaultTrainer(stopthresh=75, print_interval=20)
+    net_list = trainer.train_all(architecture=arch, data=data, seed=985227)
+
+    # save params
+    for i, n in enumerate(net_list):
+        fname = '{} {} split agg fit exp 1-4'.format(archname, i)
+        n.save_params(os.path.join(paramsdir, fname))
+
+    tuner = FineTuner(stopthresh=20)
+    for i, n in enumerate(net_list):
+        for j in range(5):
+            fname = '{} {} agg fit exp 1-4 {} tune fit exp 0'.format(archname, i, j)
+            params = L.get_all_param_values(n.net)
+            net = tuner.train_all(
+                architecture=arch, data=hvhdata,
+                split=j, startparams=params, freeze=True
+            )
+            net.save_params(os.path.join(paramsdir, fname))
+
+    return None
