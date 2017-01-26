@@ -11,6 +11,9 @@ get_layers = L.layers.get_all_layers
 class Network(object):
     """
     Base for subclassing networks for MNK
+
+    Things to consider doing:
+        mod save/load to use named layers
     """
     def __init__(self, architecture):
         self.architecture = architecture
@@ -88,12 +91,16 @@ class Network(object):
         Excludes layers in optional arg exclude (tuple or list)
         """
         layers = get_layers(self.net)
+        num_layers = len(layers)
+        exclude = [i if i >= 0 else num_layers + i for i in exclude if i > 0]
         if exclude:
             layers = [layer for l, layer in enumerate(layers) if not (l in exclude)]
 
         for layer in layers:
             for param in layer.params:
                 layer.params[param].remove('trainable')
+
+        self.params = get_all_params(self.net, trainable=True)
 
         return None
 
