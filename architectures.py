@@ -20,17 +20,35 @@ def make_FixLayer(input_var):
     return FixLayer
 
 class WeightedSumLayer(L.ElemwiseMergeLayer):
-    def __init__(self, incoming, W=lasagne.init.Constant(0.), **kwargs):
+    def __init__(self, incoming, W=lasagne.init.Constant(1.), **kwargs):
         super(L.ElemwiseMergeLayer, self).__init__(incoming, T.add, **kwargs)
         num_inputs = len(incoming)
         self.W = self.add_param(W, (num_inputs,), name='W')
 
     def get_output_shape_for(self, input_shapes):
-        """Cribbed from parent class source"""
         return (None, 36) # hardcode because I'm an ignorant pig
 
     def get_output_for(self, inputs, **kwargs):
-        return T.sum(inputs * self.W)
+        outputs = T.stack(inputs, axis=2) * self.W
+        return T.sum(outputs, axis=2)
+
+class WeightedFeatureSumPoolLayer(L.FeaturePoolLayer):
+    def __init__(self, incoming, W=lasagne.init.Constant(1.), **kwargs):
+        self.pool_size = self.input_shape[self.axis]
+        super(L.FeaturePoolLayer, self).__init__(incoming, pool_size=self.pool_size, **kwargs)
+        self.W = self.add_param(W, (self.input_shape[self.axis],), name='W')
+
+    def get_output_for(self, input, **kwargs):
+        input_shape = tuple(input.shape)
+        num_feature_maps = input_shape[self.axis]
+        num_feature_maps_out = num_feature_maps // self.pool_size
+
+        pool_shape = (input_shape[:self.axis] +
+                      (num_feature_maps_out, self.pool_size) +
+                      input_shape[self.axis+1:])
+
+        input_reshaped = (input * self.W).reshape(pool_shape)
+        return self.pool_function(input_reshaped, axis=self.axis + 1)
 
 class ReNormLayer(L.Layer):
     def get_output_for(self, input, **kwargs):
@@ -53,22 +71,14 @@ class BinaryConvLayer(L.Conv2DLayer):
     # weighted dense layer sum for subnet outputs
         # let the weights be finetuned by themselves
 
-def binary_subnet(network, input_var, num_filters=4, filter_size=(4, 4)):
+def heuristic_imitator_net(input_var=None):
     FixLayer = make_FixLayer(input_var)
-    net = BinaryConvLayer(
-        network, num_filters=num_filters,
-        filter_size=filter_size, pad='full',
-        nonlinearity=nl.identity, W=lasagne.init.Constant(.5)
-    )
-    # net = L.ParametricRectifierLayer(net, shared_axes='auto')
+    input_shape = (None, 2, 4, 9)
+    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
 
-    net = L.FeaturePoolLayer(net, pool_function=T.sum, pool_size=num_filters)
-    net = L.DropoutLayer(net, p=.5)
-    net = L.DenseLayer(
-        net, num_units=36,
-        nonlinearity=nl.very_leaky_rectify, W=lasagne.init.HeUniform(gain='relu')
-    )
-    network = FixLayer(net)
+    adjacent_2 = subnet(input_layer, input_var, num_filters=4, filter_size=(1, 4))
+
+    return net
 
 def subnet(network, input_var, num_filters=4, filter_size=(4, 4)):
     FixLayer = make_FixLayer(input_var)
@@ -103,8 +113,8 @@ def multiconvX(input_var=None, subnet_specs=None):
     subnets = [subnet(input_layer, input_var, num_filters=nf, filter_size=fs) for nf, fs in subnet_specs]
 
     network = L.ElemwiseMergeLayer(subnets, merge_function=T.add)
-    # network = WeightedSumLayer(subnets)
-    network = FixLayer(network)
+    network = WeightedSumLayer(subnets)
+    # network = FixLayer(network)
     network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
     network = FixLayer(network)
     network = ReNormLayer(network)
