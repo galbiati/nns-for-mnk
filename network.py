@@ -92,8 +92,9 @@ class Network(object):
         """
         layers = get_layers(self.net)
         num_layers = len(layers)
-        exclude = [i if i >= 0 else num_layers + i for i in exclude if i > 0]
-        if exclude:
+        exclude = [i if i >= 0 else num_layers + i for i in exclude]
+
+        if exclude is not None:
             layers = [layer for l, layer in enumerate(layers) if not (l in exclude)]
 
         for layer in layers:
