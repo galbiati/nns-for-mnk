@@ -4,9 +4,10 @@ import lasagne
 T = theano.tensor
 L = lasagne.layers
 nl = lasagne.nonlinearities
-# in general, try to make abstract constructors for net motifs
+
 
 ### LAYERS ###
+
 
 def make_FixLayer(input_var):
     class FixLayer(L.Layer):
@@ -65,11 +66,12 @@ class BinaryConvLayer(L.Conv2DLayer):
         )
         return conved
 
+
 ### NETWORKS ###
 # to do ideas:
     # force binary features
-    # weighted dense layer sum for subnet outputs
-        # let the weights be finetuned by themselves
+    # hand-engineer heuristic function imitator layers
+    
 
 def heuristic_imitator_net(input_var=None):
     FixLayer = make_FixLayer(input_var)
@@ -80,11 +82,11 @@ def heuristic_imitator_net(input_var=None):
 
     return net
 
-def subnet(network, input_var, num_filters=4, filter_size=(4, 4)):
+def subnet(network, input_var, num_filters=4, filter_size=(4, 4), pad='full'):
     FixLayer = make_FixLayer(input_var)
     net = L.Conv2DLayer(
         network, num_filters=num_filters,
-        filter_size=filter_size, pad='full',
+        filter_size=filter_size, pad=pad,
         nonlinearity=nl.identity
     )
     net = L.ParametricRectifierLayer(net, shared_axes='auto')
@@ -98,6 +100,7 @@ def subnet(network, input_var, num_filters=4, filter_size=(4, 4)):
     net = L.DropoutLayer(net, p=.125)
     net = FixLayer(net)
     return net
+
 
 def make_subnets(network, input_var, subnet_specs=None):
     if subnet_specs is None:
@@ -133,13 +136,13 @@ def multiconvX_ws(input_var=None, subnet_specs=None):
         for nf, fs in subnet_specs
     ]
 
-    # network = L.ElemwiseMergeLayer(subnets, merge_function=T.add)
     network = WeightedSumLayer(subnets)
     network = FixLayer(network)
     network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
     network = FixLayer(network)
     network = ReNormLayer(network)
     return network
+
 
 def multiconvX(input_var=None, subnet_specs=None):
     if subnet_specs is None:
@@ -158,65 +161,66 @@ def multiconvX(input_var=None, subnet_specs=None):
     ]
 
     network = L.ElemwiseMergeLayer(subnets, merge_function=T.add)
-    # network = WeightedSumLayer(subnets)
     network = FixLayer(network)
     network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
     network = FixLayer(network)
     network = ReNormLayer(network)
     return network
 
-def multiconvX_medlrg(input_var=None):
-    FixLayer = make_FixLayer(input_var)
+### Respec the commented out functions in YAML file
 
-    input_shape = (None, 2, 4, 9)
-
-    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
-    subnet1 = subnet(input_layer, input_var, num_filters=2, filter_size=(1,4))
-    subnet2 = subnet(input_layer, input_var, num_filters=2, filter_size=(4,1))
-    subnet3 = subnet(input_layer, input_var, num_filters=4, filter_size=(4,4))
-
-    subnet4 = subnet(input_layer, input_var, num_filters=2, filter_size=(1,3))
-    subnet5 = subnet(input_layer, input_var, num_filters=2, filter_size=(3,1))
-    subnet6 = subnet(input_layer, input_var, num_filters=4, filter_size=(3,3))
-
-    subnet7 = subnet(input_layer, input_var, num_filters=2, filter_size=(1,2))
-    subnet8 = subnet(input_layer, input_var, num_filters=2, filter_size=(2,1))
-    subnet9 = subnet(input_layer, input_var, num_filters=4, filter_size=(2,2))
-    subnets = [subnet1, subnet2, subnet3, subnet4, subnet5, subnet6, subnet7, subnet8, subnet9]
-
-    network = L.ElemwiseMergeLayer(subnets, merge_function=T.add)
-    # network = WeightedSumLayer(subnets)
-    network = FixLayer(network)
-    network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
-    network = FixLayer(network)
-    network = ReNormLayer(network)
-    return network
-
-def multiconvX1(input_var=None):
-    FixLayer = make_FixLayer(input_var)
-
-    input_shape = (None, 2, 4, 9)
-
-    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
-    subnet1 = subnet(input_layer, input_var, num_filters=4, filter_size=(1,4))
-    subnet2 = subnet(input_layer, input_var, num_filters=4, filter_size=(4,1))
-    subnet3 = subnet(input_layer, input_var, num_filters=8, filter_size=(4,4))
-
-    subnet4 = subnet(input_layer, input_var, num_filters=4, filter_size=(1,3))
-    subnet5 = subnet(input_layer, input_var, num_filters=4, filter_size=(3,1))
-    subnet6 = subnet(input_layer, input_var, num_filters=8, filter_size=(3,3))
-
-    subnet7 = subnet(input_layer, input_var, num_filters=4, filter_size=(1,2))
-    subnet8 = subnet(input_layer, input_var, num_filters=4, filter_size=(2,1))
-    subnet9 = subnet(input_layer, input_var, num_filters=8, filter_size=(2,2))
-    subnets = [subnet1, subnet2, subnet3, subnet4, subnet5, subnet6, subnet7, subnet8, subnet9]
-
-    network = L.ElemwiseMergeLayer(subnets, merge_function=T.add)
-    network = FixLayer(network)
-    network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
-    network = FixLayer(network)
-    network = ReNormLayer(network)
-    return network
+# def multiconvX_medlrg(input_var=None):
+#     FixLayer = make_FixLayer(input_var)
+#
+#     input_shape = (None, 2, 4, 9)
+#
+#     input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
+#     subnet1 = subnet(input_layer, input_var, num_filters=2, filter_size=(1,4))
+#     subnet2 = subnet(input_layer, input_var, num_filters=2, filter_size=(4,1))
+#     subnet3 = subnet(input_layer, input_var, num_filters=4, filter_size=(4,4))
+#
+#     subnet4 = subnet(input_layer, input_var, num_filters=2, filter_size=(1,3))
+#     subnet5 = subnet(input_layer, input_var, num_filters=2, filter_size=(3,1))
+#     subnet6 = subnet(input_layer, input_var, num_filters=4, filter_size=(3,3))
+#
+#     subnet7 = subnet(input_layer, input_var, num_filters=2, filter_size=(1,2))
+#     subnet8 = subnet(input_layer, input_var, num_filters=2, filter_size=(2,1))
+#     subnet9 = subnet(input_layer, input_var, num_filters=4, filter_size=(2,2))
+#     subnets = [subnet1, subnet2, subnet3, subnet4, subnet5, subnet6, subnet7, subnet8, subnet9]
+#
+#     network = L.ElemwiseMergeLayer(subnets, merge_function=T.add)
+#     # network = WeightedSumLayer(subnets)
+#     network = FixLayer(network)
+#     network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
+#     network = FixLayer(network)
+#     network = ReNormLayer(network)
+#     return network
+#
+# def multiconvX1(input_var=None):
+#     FixLayer = make_FixLayer(input_var)
+#
+#     input_shape = (None, 2, 4, 9)
+#
+#     input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
+#     subnet1 = subnet(input_layer, input_var, num_filters=4, filter_size=(1,4))
+#     subnet2 = subnet(input_layer, input_var, num_filters=4, filter_size=(4,1))
+#     subnet3 = subnet(input_layer, input_var, num_filters=8, filter_size=(4,4))
+#
+#     subnet4 = subnet(input_layer, input_var, num_filters=4, filter_size=(1,3))
+#     subnet5 = subnet(input_layer, input_var, num_filters=4, filter_size=(3,1))
+#     subnet6 = subnet(input_layer, input_var, num_filters=8, filter_size=(3,3))
+#
+#     subnet7 = subnet(input_layer, input_var, num_filters=4, filter_size=(1,2))
+#     subnet8 = subnet(input_layer, input_var, num_filters=4, filter_size=(2,1))
+#     subnet9 = subnet(input_layer, input_var, num_filters=8, filter_size=(2,2))
+#     subnets = [subnet1, subnet2, subnet3, subnet4, subnet5, subnet6, subnet7, subnet8, subnet9]
+#
+#     network = L.ElemwiseMergeLayer(subnets, merge_function=T.add)
+#     network = FixLayer(network)
+#     network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
+#     network = FixLayer(network)
+#     network = ReNormLayer(network)
+#     return network
 
 def archX(input_var=None, num_filters=32, pool_size=2, filter_size=(4,4), pool=True, pad='full'):
     input_shape = (None, 2, 4, 9)
@@ -243,5 +247,6 @@ def archX(input_var=None, num_filters=32, pool_size=2, filter_size=(4,4), pool=T
 
     return network
 
-def default_convnet(input_var=None):
+
+def default_archX(input_var=None):
     return archX(input_var, num_filters=32, pool_size=2, filter_size=(4, 4))
