@@ -1,6 +1,6 @@
 architectures:
     name: multiconvX_ws_large
-    function: multiconvX
+    function: multiconvX_ws
     kwargs:
         subnet_specs:
             - (4, (1, 4))
@@ -16,3 +16,11 @@ architectures:
             - (4, (1, 2))
             - (4, (2, 1))
             - (4, (2, 2))
+
+    name: multiconvX_ws_small
+    function: multiconvX_ws
+    kwargs:
+        subnet_specs:
+            - (4, (1, 4))
+            - (4, (4, 1))
+            - (4, (4, 4))

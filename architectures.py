@@ -99,6 +99,48 @@ def subnet(network, input_var, num_filters=4, filter_size=(4, 4)):
     net = FixLayer(net)
     return net
 
+def make_subnets(network, input_var, subnet_specs=None):
+    if subnet_specs is None:
+        # set default
+        subnet_specs = [
+            (4, (1, 4)), (4, (4, 1)), (4, (4, 4)),
+            (4, (1, 3)), (4, (3, 1)), (4, (3, 3)),
+            (4, (1, 2)), (4, (2, 1)), (4, (2, 2))
+        ]
+    FixLayer = make_FixLayer(input_var)
+    input_shape = (None, 2, 4, 9)
+    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
+    subnets = [
+        subnet(input_layer, input_var, num_filters=nf, filter_size=fs)
+        for nf, fs in subnet_specs
+    ]
+    return subnets
+
+
+def multiconvX_ws(input_var=None, subnet_specs=None):
+    if subnet_specs is None:
+        # set default
+        subnet_specs = [
+            (4, (1, 4)), (4, (4, 1)), (4, (4, 4)),
+            (4, (1, 3)), (4, (3, 1)), (4, (3, 3)),
+            (4, (1, 2)), (4, (2, 1)), (4, (2, 2))
+        ]
+    FixLayer = make_FixLayer(input_var)
+    input_shape = (None, 2, 4, 9)
+    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
+    subnets = [
+        subnet(input_layer, input_var, num_filters=nf, filter_size=fs)
+        for nf, fs in subnet_specs
+    ]
+
+    # network = L.ElemwiseMergeLayer(subnets, merge_function=T.add)
+    network = WeightedSumLayer(subnets)
+    network = FixLayer(network)
+    network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
+    network = FixLayer(network)
+    network = ReNormLayer(network)
+    return network
+
 def multiconvX(input_var=None, subnet_specs=None):
     if subnet_specs is None:
         # set default
@@ -110,11 +152,14 @@ def multiconvX(input_var=None, subnet_specs=None):
     FixLayer = make_FixLayer(input_var)
     input_shape = (None, 2, 4, 9)
     input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
-    subnets = [subnet(input_layer, input_var, num_filters=nf, filter_size=fs) for nf, fs in subnet_specs]
+    subnets = [
+        subnet(input_layer, input_var, num_filters=nf, filter_size=fs)
+        for nf, fs in subnet_specs
+    ]
 
     network = L.ElemwiseMergeLayer(subnets, merge_function=T.add)
-    network = WeightedSumLayer(subnets)
-    # network = FixLayer(network)
+    # network = WeightedSumLayer(subnets)
+    network = FixLayer(network)
     network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
     network = FixLayer(network)
     network = ReNormLayer(network)
