@@ -198,12 +198,8 @@ class FineTuner(DefaultTrainer):
         if startparams:
             _layers = L.layers.get_all_layers(net.net)
             L.layers.set_all_param_values(_layers, startparams)
-            # convlayer, prelulayer = _layers[1:3]
             if freeze:
                 net.freeze_params(exclude=exclude)
-                # convlayer.params[convlayer.W].remove('trainable')
-                # convlayer.params[convlayer.b].remove('trainable')
-                # prelulayer.params[prelulayer.alpha].remove('trainable')
 
         train_idxs = r[split, :3]
         val_idxs = r[split, 3:4]
