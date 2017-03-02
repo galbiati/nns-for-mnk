@@ -71,7 +71,7 @@ class BinaryConvLayer(L.Conv2DLayer):
 # to do ideas:
     # force binary features
     # hand-engineer heuristic function imitator layers
-    
+
 
 def heuristic_imitator_net(input_var=None):
     FixLayer = make_FixLayer(input_var)
@@ -82,7 +82,7 @@ def heuristic_imitator_net(input_var=None):
 
     return net
 
-def subnet(network, input_var, num_filters=4, filter_size=(4, 4), pad='full'):
+def subnet(network, input_var, num_filters=4, filter_size=(4, 4), pad='valid'):
     FixLayer = make_FixLayer(input_var)
     net = L.Conv2DLayer(
         network, num_filters=num_filters,
