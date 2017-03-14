@@ -178,6 +178,8 @@ def archX(input_var=None, num_filters=32, pool_size=2, filter_size=(4,4), pool=T
         nonlinearity=nl.identity
     )
     network = L.ParametricRectifierLayer(network, shared_axes='auto')
+    network = L.DropoutLayer(network, p=.125, shared_axes=(2, 3))
+
     if pool:
         network = L.FeaturePoolLayer(network, pool_function=T.sum, pool_size=pool_size)
     network = L.DropoutLayer(network, p=.75)
@@ -206,6 +208,37 @@ def archX_wfspool(input_var=None, num_filters=32, filter_size=(4, 4), pad='full'
     network = L.ParametricRectifierLayer(network, shared_axes='auto')
     network = L.DropoutLayer(network, p=.125, shared_axes=(2, 3))
     network = WeightedFeatureSumPoolLayer(network)
+    network = L.DenseLayer(
+        network, num_units=36, nonlinearity=nl.very_leaky_rectify,
+        W=lasagne.init.HeUniform(gain='relu')
+    )
+
+    network = FixLayer(network)
+    network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
+    network = FixLayer(network)
+    network = ReNormLayer(network)
+
+    return network
+
+def archX_deep(input_var=None):
+    input_shape = (None, 2, 4, 9)
+    FixLayer = make_FixLayer(input_var)
+    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
+
+    network = L.Conv2DLayer(
+        input_layer, num_filters=8, filter_size=(2, 2), pad='full',
+        nonlinearity=nl.very_leaky_rectify
+    )
+
+    network = WeightedFeatureSumPoolLayer(network)
+
+    network = L.Conv2DLayer(
+        network, num_filters=16, filter_size=(4, 4), pad='full',
+        nonlinearity=nl.very_leaky_rectify
+    )
+
+    network = WeightedFeatureSumPoolLayer(network)
+
     network = L.DenseLayer(
         network, num_units=36, nonlinearity=nl.very_leaky_rectify,
         W=lasagne.init.HeUniform(gain='relu')
