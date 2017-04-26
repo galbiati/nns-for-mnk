@@ -1,8 +1,7 @@
-# runs a fitting routine
-
 # imports
 import os
 import sys
+import yaml
 import numpy as np
 import pandas as pd
 import theano
@@ -30,5 +29,17 @@ Xs = np.concatenate(hvhdata[2])
 ys = np.concatenate(hvhdata[3])
 Ss = np.concatenate(hvhdata[4])
 
+def main():
+    theano.gpuarray.use("cuda")
+    paramsdir = os.path.abspath('/scratch/gvg218/params_archive')
+
+    with open('arch_specs.yaml') as archfile:
+        arch_dict = yaml.load(archfile)
+
+    for name, architecture in arch_dict.items():
+        print(architecture)
+        run_full_fit(architecture, data=data, hvhdata=hvhdata, tune=True)
+
+
 if __name__ == '__main__':
-    run_full_fit(multiconvX, 'multiconvX_lrg')
+    main()
