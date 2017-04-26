@@ -1,12 +1,9 @@
 #!/bin/bash
-#PBS --nodes=1:ppn=4:gpus=1:titan
-#PBS --ntasks=1
-#PBS --time=48:00:00
-#PBS --mem=8GB
-#PBS --job-name=MNKnnets
-#PBS --mail-type=END
-#PBS --mail-user=gvg218@nyu.edu
-#PBS --output=MNKnnet_%j.out
+#PBS -l nodes=1:ppn=4:gpus=1:titan
+#PBS -l walltime=48:00:00
+#PBS -l mem=8GB
+#PBS -N MNKnnets
+#PBS -M gvg218@nyu.edu
 
 module purge
 module load python/intel/3.5.1
