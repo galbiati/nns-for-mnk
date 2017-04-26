@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pandas as pd
 
@@ -17,7 +16,6 @@ def X_decoder(x):
 
 def unpack_data(df):
     """Convert dataframe into separate tensors and vectors"""
-    decoder = lambda x: np.array(list(x)).astype(int).reshape([4,9])
     bp = X_decoder(df['bp'].values)
     wp = X_decoder(df['wp'].values)
     X = np.zeros([bp.shape[0], 2, bp.shape[1], bp.shape[2]])

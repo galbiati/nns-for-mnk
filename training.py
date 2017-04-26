@@ -138,7 +138,6 @@ class DefaultTrainer(Trainer):
         r = np.tile(np.arange(num_splits), [num_splits, 1])
         r = (r + r.T) % num_splits
 
-        net = Network(architecture)
         train_idxs = r[split, :3]
         val_idxs = r[split, 3:4]
         test_idxs = r[split, 4:]
@@ -150,6 +149,7 @@ class DefaultTrainer(Trainer):
         S = np.concatenate([S, S, S, S])
         print(Xt.shape)
 
+        net = Network(architecture)
         self.train(net, training_data=(X, y), validation_data=(Xv, yv))
         self.test(net, testing_data=(Xt, yt))
 
