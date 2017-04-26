@@ -5,10 +5,7 @@ T = theano.tensor
 L = lasagne.layers
 nl = lasagne.nonlinearities
 
-
 ### LAYERS ###
-
-
 def make_FixLayer(input_var):
     class FixLayer(L.Layer):
         def get_output_for(self, input, **kwargs):
@@ -19,6 +16,7 @@ def make_FixLayer(input_var):
             return numer
 
     return FixLayer
+
 
 class WeightedSumLayer(L.ElemwiseMergeLayer):
     def __init__(self, incoming, W=lasagne.init.Constant(1.), **kwargs):
@@ -33,38 +31,10 @@ class WeightedSumLayer(L.ElemwiseMergeLayer):
         outputs = T.stack(inputs, axis=2) * self.W
         return T.sum(outputs, axis=2)
 
-class WeightedFeatureSumPoolLayer(L.FeaturePoolLayer):
-    def __init__(self, incoming, W=lasagne.init.Constant(1.), **kwargs):
-        self.pool_size = self.input_shape[self.axis]
-        super(L.FeaturePoolLayer, self).__init__(incoming, pool_size=self.pool_size, **kwargs)
-        self.W = self.add_param(W, (self.input_shape[self.axis],), name='W')
-
-    def get_output_for(self, input, **kwargs):
-        input_shape = tuple(input.shape)
-        num_feature_maps = input_shape[self.axis]
-        num_feature_maps_out = num_feature_maps // self.pool_size
-
-        pool_shape = (input_shape[:self.axis] +
-                      (num_feature_maps_out, self.pool_size) +
-                      input_shape[self.axis+1:])
-
-        input_reshaped = (input * self.W).reshape(pool_shape)
-        return self.pool_function(input_reshaped, axis=self.axis + 1)
 
 class ReNormLayer(L.Layer):
     def get_output_for(self, input, **kwargs):
         return input / input.sum(axis=1).dimshuffle((0, 'x'))
-
-class BinaryConvLayer(L.Conv2DLayer):
-    def convolve(self, input, **kwargs):
-        border_mode = 'half' if self.pad == 'same' else self.pad
-        transW = self.W >= .5
-        conved = self.convolution(
-            input, transW, self.input_shape, self.get_W_shape(),
-            subsample=self.stride, border_mode=border_mode,
-            filter_flip=self.flip_filters
-        )
-        return conved
 
 
 ### NETWORKS ###
@@ -72,15 +42,6 @@ class BinaryConvLayer(L.Conv2DLayer):
     # force binary features
     # hand-engineer heuristic function imitator layers
 
-
-def heuristic_imitator_net(input_var=None):
-    FixLayer = make_FixLayer(input_var)
-    input_shape = (None, 2, 4, 9)
-    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
-
-    adjacent_2 = subnet(input_layer, input_var, num_filters=4, filter_size=(1, 4))
-
-    return net
 
 def subnet(network, input_var, num_filters=4, filter_size=(4, 4), pad='valid'):
     FixLayer = make_FixLayer(input_var)
@@ -152,6 +113,7 @@ def multiconvX(input_var=None, subnet_specs=None):
             (4, (1, 3)), (4, (3, 1)), (4, (3, 3)),
             (4, (1, 2)), (4, (2, 1)), (4, (2, 2))
         ]
+
     FixLayer = make_FixLayer(input_var)
     input_shape = (None, 2, 4, 9)
     input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
@@ -194,53 +156,44 @@ def archX(input_var=None, num_filters=32, pool_size=2, filter_size=(4,4), pool=T
 
     return network
 
-def archX_wfspool(input_var=None, num_filters=32, filter_size=(4, 4), pad='full'):
+def archX_deep(input_var=None,
+                conv1kws={'num_filters': 4, 'filter_size': (2, 2)},
+                conv2kws={'num_filters': 32, 'filter_size': (2, 2)},
+                num_latent=32, pool=False
+                ):
     input_shape = (None, 2, 4, 9)
     FixLayer = make_FixLayer(input_var)
-
     input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
 
     network = L.Conv2DLayer(
-        input_layer, num_filters=num_filters,
-        filter_size=filter_size, pad=pad, nonlinearity=nl.identity
+        input_layer, pad='full', nonlinearity=nl.identity, **conv1kws
     )
 
     network = L.ParametricRectifierLayer(network, shared_axes='auto')
-    network = L.DropoutLayer(network, p=.125, shared_axes=(2, 3))
-    network = WeightedFeatureSumPoolLayer(network)
+    network = L.DropoutLayer(network, p=.0625, shared_axes=(2, 3))
+
+    network = L.Conv2DLayer(
+        network, pad='full', nonlinearity=nl.identity,
+        **conv2kws
+    )
+
+    network = L.ParametricRectifierLayer(network, shared_axes='auto')
+    network = L.DropoutLayer(network, p=.0625, shared_axes=(2, 3))
+
+    if pool:
+        network = L.FeaturePoolLayer(
+            network, pool_function=T.sum, pool_size=conv2kws['num_filters']
+        )
+
+
     network = L.DenseLayer(
-        network, num_units=36, nonlinearity=nl.very_leaky_rectify,
+        network, num_units=num_latent, nonlinearity=nl.leaky_rectify,
         W=lasagne.init.HeUniform(gain='relu')
     )
-
-    network = FixLayer(network)
-    network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
-    network = FixLayer(network)
-    network = ReNormLayer(network)
-
-    return network
-
-def archX_deep(input_var=None):
-    input_shape = (None, 2, 4, 9)
-    FixLayer = make_FixLayer(input_var)
-    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
-
-    network = L.Conv2DLayer(
-        input_layer, num_filters=8, filter_size=(2, 2), pad='full',
-        nonlinearity=nl.very_leaky_rectify
-    )
-
-    network = WeightedFeatureSumPoolLayer(network)
-
-    network = L.Conv2DLayer(
-        network, num_filters=16, filter_size=(4, 4), pad='full',
-        nonlinearity=nl.very_leaky_rectify
-    )
-
-    network = WeightedFeatureSumPoolLayer(network)
+    network = L.DropoutLayer(network, p=.25)
 
     network = L.DenseLayer(
-        network, num_units=36, nonlinearity=nl.very_leaky_rectify,
+        network, num_units=36, nonlinearity=nl.identity,
         W=lasagne.init.HeUniform(gain='relu')
     )
 
