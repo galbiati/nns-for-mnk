@@ -322,6 +322,19 @@ deep_a3:
         num_latent: 32
         pool: False
 
+deep_a4:
+    name: deep a3
+    type: archX_deep
+    kwargs:
+        conv1kws:
+            num_filters: 2
+            filter_size: [2, 2]
+        conv2kws:
+            num_filters: 8
+            filter_size: [4, 4]
+        num_latent: 64
+        pool: False
+
 deep_b1:
     name: deep b1
     type: archX_deep
@@ -414,7 +427,7 @@ deep_c3:
         pool: False
 
 deep_c4:
-    name: deep c2
+    name: deep c4
     type: archX_deep
     kwargs:
         conv1kws:
@@ -422,6 +435,58 @@ deep_c4:
             filter_size: [2, 2]
         conv2kws:
             num_filters: 32
+            filter_size: [4, 4]
+        num_latent: 64
+        pool: False
+
+deep_d1:
+    name: deep d1
+    type: archX_deep
+    kwargs:
+        conv1kws:
+            num_filters: 16
+            filter_size: [2, 2]
+        conv2kws:
+            num_filters: 64
+            filter_size: [4, 4]
+        num_latent: 8
+        pool: False
+
+deep_d2:
+    name: deep d2
+    type: archX_deep
+    kwargs:
+        conv1kws:
+            num_filters: 16
+            filter_size: [2, 2]
+        conv2kws:
+            num_filters: 64
+            filter_size: [4, 4]
+        num_latent: 16
+        pool: False
+
+deep_d3:
+    name: deep d3
+    type: archX_deep
+    kwargs:
+        conv1kws:
+            num_filters: 16
+            filter_size: [2, 2]
+        conv2kws:
+            num_filters: 64
+            filter_size: [4, 4]
+        num_latent: 32
+        pool: False
+
+deep_d4:
+    name: deep d4
+    type: archX_deep
+    kwargs:
+        conv1kws:
+            num_filters: 16
+            filter_size: [2, 2]
+        conv2kws:
+            num_filters: 64
             filter_size: [4, 4]
         num_latent: 64
         pool: False

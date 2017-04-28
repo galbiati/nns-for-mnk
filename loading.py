@@ -18,7 +18,7 @@ def unpack_data(df):
     """Convert dataframe into separate tensors and vectors"""
     bp = X_decoder(df['bp'].values)
     wp = X_decoder(df['wp'].values)
-    X = np.zeros([bp.shape[0], 2, bp.shape[1], bp.shape[2]])
+    X = np.zeros([bp.shape[0], 2, bp.shape[1], bp.shape[2]], dtype=np.float32)
     X[:, 0, :, :] = bp
     X[:, 1, :, :] = wp
     y = df['zet'].values.astype(np.int32)
