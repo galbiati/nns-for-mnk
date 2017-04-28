@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import theano
 import lasagne as L
@@ -216,7 +217,7 @@ class FineTuner(DefaultTrainer):
 
         return net
 
-def run_full_fit(architecture, data, hvhdata, tune=True, save=True):
+def run_full_fit(architecture, data, hvhdata, paramsdir, tune=True, save=True):
     """
     Runs the full fitting experiment, pretraining on later experiments and testing on first.
     Saves data as it goes to avoid eating memory.
@@ -231,7 +232,7 @@ def run_full_fit(architecture, data, hvhdata, tune=True, save=True):
     tunekws = {'freeze': True, 'exclude': [-5]}
 
     # start training
-    trainer = DefaultTrainer(stopthresh=50, print_interval=20)
+    trainer = DefaultTrainer(stopthresh=50, print_interval=25)
     net_list = trainer.train_all(architecture=arch, data=data, seed=985227)
 
     # save params
@@ -245,9 +246,9 @@ def run_full_fit(architecture, data, hvhdata, tune=True, save=True):
 
         for i, n in enumerate(net_list):
             for j in range(5):
-                
+
                 fname = '{} {} agg fit exp 1-4 {} tune fit exp 0'.format(archname, i, j)
-                params = L.get_all_param_values(n.net)
+                params = L.layers.get_all_param_values(n.net)
                 net = tuner.train_all(architecture=arch, data=hvhdata, split=j, startparams=params, **tunekws )
 
                 if save:

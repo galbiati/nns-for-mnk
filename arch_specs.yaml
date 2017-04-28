@@ -425,3 +425,183 @@ deep_c4:
             filter_size: [4, 4]
         num_latent: 64
         pool: False
+
+regular_a1:
+    name: regular a1
+    type: archX
+    kwargs:
+        num_filters: 2
+        pool_size: 2
+        filter_size: [2, 2]
+        pool: True
+        pad: full
+
+regular_a2:
+    name: regular a2
+    type: archX
+    kwargs:
+        num_filters: 4
+        pool_size: 4
+        filter_size: [2, 2]
+        pool: True
+        pad: full
+
+regular_a3:
+    name: regular a3
+    type: archX
+    kwargs:
+        num_filters: 8
+        pool_size: 8
+        filter_size: [2, 2]
+        pool: True
+        pad: full
+
+regular_a4:
+    name: regular a4
+    type: archX
+    kwargs:
+        num_filters: 16
+        pool_size: 16
+        filter_size: [2, 2]
+        pool: True
+        pad: full
+
+regular_a5:
+    name: regular a5
+    type: archX
+    kwargs:
+        num_filters: 32
+        pool_size: 32
+        filter_size: [2, 2]
+        pool: True
+        pad: full
+
+regular_a6:
+    name: regular a6
+    type: archX
+    kwargs:
+        num_filters: 64
+        pool_size: 64
+        filter_size: [2, 2]
+        pool: True
+        pad: full
+
+regular_b1:
+    name: regular b1
+    type: archX
+    kwargs:
+        num_filters: 2
+        pool_size: 2
+        filter_size: [3, 3]
+        pool: True
+        pad: full
+
+regular_b2:
+    name: regular b2
+    type: archX
+    kwargs:
+        num_filters: 4
+        pool_size: 4
+        filter_size: [3, 3]
+        pool: True
+        pad: full
+
+regular_b3:
+    name: regular b3
+    type: archX
+    kwargs:
+        num_filters: 8
+        pool_size: 8
+        filter_size: [3, 3]
+        pool: True
+        pad: full
+
+regular_b4:
+    name: regular b4
+    type: archX
+    kwargs:
+        num_filters: 16
+        pool_size: 16
+        filter_size: [3, 3]
+        pool: True
+        pad: full
+
+regular_b5:
+    name: regular b5
+    type: archX
+    kwargs:
+        num_filters: 32
+        pool_size: 32
+        filter_size: [3, 3]
+        pool: True
+        pad: full
+
+regular_b6:
+    name: regular b6
+    type: archX
+    kwargs:
+        num_filters: 64
+        pool_size: 64
+        filter_size: [3, 3]
+        pool: True
+        pad: full
+
+regular_c1:
+    name: regular a1
+    type: archX
+    kwargs:
+        num_filters: 2
+        pool_size: 2
+        filter_size: [4, 4]
+        pool: True
+        pad: full
+
+regular_c2:
+    name: regular c2
+    type: archX
+    kwargs:
+        num_filters: 4
+        pool_size: 4
+        filter_size: [4, 4]
+        pool: True
+        pad: full
+
+regular_c3:
+    name: regular c3
+    type: archX
+    kwargs:
+        num_filters: 8
+        pool_size: 8
+        filter_size: [4, 4]
+        pool: True
+        pad: full
+
+regular_c4:
+    name: regular c4
+    type: archX
+    kwargs:
+        num_filters: 16
+        pool_size: 16
+        filter_size: [4, 4]
+        pool: True
+        pad: full
+
+regular_c5:
+    name: regular c5
+    type: archX
+    kwargs:
+        num_filters: 32
+        pool_size: 32
+        filter_size: [4, 4]
+        pool: True
+        pad: full
+
+regular_c6:
+    name: regular c6
+    type: archX
+    kwargs:
+        num_filters: 64
+        pool_size: 64
+        filter_size: [4, 4]
+        pool: True
+        pad: full

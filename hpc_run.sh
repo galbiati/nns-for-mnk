@@ -1,17 +1,16 @@
 #!/bin/bash
-#PBS -l nodes=1:ppn=4:gpus=1:titan
-#PBS -l walltime=12:00:00
-#PBS -l mem=4GB
-#PBS -N MNKnnets
-#PBS -M gvg218@nyu.edu
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=2
+#SBATCH --time=6:00:00
+#SBATCH --mem=8GB
+#SBATCH --job-name=MNKnnetTest
+#SBATCH --mail-type=END
+#SBATCH --mail-user=gvg218@nyu.edu
+#SBATCH --output=mnk_%j.out
 
 module purge
 module load python/intel/3.5.1
-source $HOME/nnet/bin/activate
+# source $HOME/nnet/bin/activate #fix this!
 
-RUNDIR=$SCRATCH/gvg218/nnetrundir/run-${SLURM_JOB_ID/.*}
-mkdir RUNDIR
-
-cd $RUNDIR
-
-python $SCRATCH/gvg218/nnets-for-mnk/factorial_experiment.py
+cd /scratch/gvg218/nns-for-mnk
