@@ -12,17 +12,35 @@ T = theano.tensor
 class Trainer(object):
     """
     Base for subclassing optimizers
+    Includes:
+        - a function for iterating minibatches
+        - a training function that trains a given network on provided training
+        and validation data as X, y tuples
+        - a test function that tests a given network on provided test data as
+        an X, y tuple
     """
     def __init__(self, batchsize=128, stopthresh=100, print_interval=50,
                 updates=L.updates.adam, update_args={}, seed=None):
         """
-        Move relevant items into arguments later
-        Fix updates to get set on network
+        ToDos:
+        - More options?
+
+        Arguments:
+        - batchsize: number of examples in each minibatch
+        - stopthresh: early stopping threshold. training stops when mean
+        gradient of validation error becomes positive over last <stopthresh>
+        epochs
+        - print_interval: print a small report every <print_interval> epochs
+        - updates: reference to updates algorithm, either from lasagne.updates
+        or implemented similarly
+        - update_args: dictionary of arguments for update algorithm (eg learning
+        rate, momentum, etc)
+        - seed: random seed for repeating experiment
         """
         self.updates = updates
         self.bs = batchsize
         self.epoch = 0
-        self.max_epoch = 5000
+        self.max_epoch = 5000                   # default: really high
         self.stopthresh = stopthresh
         self.print_interval = print_interval
         self.update_args = update_args
@@ -139,7 +157,7 @@ class DefaultTrainer(Trainer):
         r = np.tile(np.arange(num_splits), [num_splits, 1])
         r = (r + r.T) % num_splits
 
-        train_idxs = r[split, :3]
+        train_idxs = r[split, :3] # you've hard-coded 5 splits here accidentally; revisit and fix at some point
         val_idxs = r[split, 3:4]
         test_idxs = r[split, 4:]
 

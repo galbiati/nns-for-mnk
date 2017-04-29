@@ -30,14 +30,12 @@ ys = np.concatenate(hvhdata[3])
 Ss = np.concatenate(hvhdata[4])
 
 def main():
-    theano.gpuarray.use("cuda")
     paramsdir = os.path.abspath('/scratch/gvg218/params_archive')
 
     with open('arch_specs.yaml') as archfile:
         arch_dict = yaml.load(archfile)
 
     for name, architecture in arch_dict.items():
-        print(architecture)
         run_full_fit(architecture, data=data, hvhdata=hvhdata, tune=True)
 
 

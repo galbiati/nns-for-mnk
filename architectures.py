@@ -1,6 +1,7 @@
 import theano
 import lasagne
 
+### ALIASES ###
 T = theano.tensor
 L = lasagne.layers
 nl = lasagne.nonlinearities
@@ -173,8 +174,7 @@ def archX_deep(input_var=None,
     network = L.DropoutLayer(network, p=.0625, shared_axes=(2, 3))
 
     network = L.Conv2DLayer(
-        network, pad='full', nonlinearity=nl.identity,
-        **conv2kws
+        network, pad='full', nonlinearity=nl.identity, **conv2kws
     )
 
     network = L.ParametricRectifierLayer(network, shared_axes='auto')
@@ -184,7 +184,6 @@ def archX_deep(input_var=None,
         network = L.FeaturePoolLayer(
             network, pool_function=T.sum, pool_size=conv2kws['num_filters']
         )
-
 
     network = L.DenseLayer(
         network, num_units=num_latent, nonlinearity=nl.leaky_rectify,

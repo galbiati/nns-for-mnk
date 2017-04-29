@@ -1,3 +1,9 @@
+### This file specifies a large number of sample architectures for factorial
+### analysis. They can be loaded into a python dictionary and individually
+### passed to the "run_full_fit" function in training.py, which will pass
+### dicts of kws to the appropriate architectures.
+
+
 a1:
     name: a1
     type: multiconvX_ws
@@ -323,7 +329,7 @@ deep_a3:
         pool: False
 
 deep_a4:
-    name: deep a3
+    name: deep a4
     type: archX_deep
     kwargs:
         conv1kws:
@@ -551,6 +557,16 @@ regular_a6:
         pool: True
         pad: full
 
+regular_a7:
+    name: regular a7
+    type: archX
+    kwargs:
+        num_filters: 128
+        pool_size: 128
+        filter_size: [2, 2]
+        pool: True
+        pad: full
+
 regular_b1:
     name: regular b1
     type: archX
@@ -607,6 +623,16 @@ regular_b6:
     kwargs:
         num_filters: 64
         pool_size: 64
+        filter_size: [3, 3]
+        pool: True
+        pad: full
+
+regular_b7:
+    name: regular b7
+    type: archX
+    kwargs:
+        num_filters: 128
+        pool_size: 128
         filter_size: [3, 3]
         pool: True
         pad: full
@@ -669,4 +695,224 @@ regular_c6:
         pool_size: 64
         filter_size: [4, 4]
         pool: True
+        pad: full
+
+regular_c7:
+    name: regular c7
+    type: archX
+    kwargs:
+        num_filters: 128
+        pool_size: 128
+        filter_size: [4, 4]
+        pool: True
+        pad: full
+
+nopool_a1:
+    name: nopool a1
+    type: archX
+    kwargs:
+        num_filters: 2
+        pool_size: 2
+        filter_size: [2, 2]
+        pool: False
+        pad: full
+
+nopool_a2:
+    name: nopool a2
+    type: archX
+    kwargs:
+        num_filters: 4
+        pool_size: 2
+        filter_size: [2, 2]
+        pool: False
+        pad: full
+
+nopool_a3:
+    name: nopool a3
+    type: archX
+    kwargs:
+        num_filters: 8
+        pool_size: 2
+        filter_size: [2, 2]
+        pool: False
+        pad: full
+
+nopool_a4:
+    name: nopool a4
+    type: archX
+    kwargs:
+        num_filters: 16
+        pool_size: 2
+        filter_size: [2, 2]
+        pool: False
+        pad: full
+
+nopool_a5:
+    name: nopool a5
+    type: archX
+    kwargs:
+        num_filters: 32
+        pool_size: 2
+        filter_size: [2, 2]
+        pool: False
+        pad: full
+
+nopool_a6:
+    name: nopool a6
+    type: archX
+    kwargs:
+        num_filters: 64
+        pool_size: 2
+        filter_size: [2, 2]
+        pool: False
+        pad: full
+
+nopool_a7:
+    name: nopool a7
+    type: archX
+    kwargs:
+        num_filters: 128
+        pool_size: 2
+        filter_size: [2, 2]
+        pool: False
+        pad: full
+
+nopool_b1:
+    name: nopool b1
+    type: archX
+    kwargs:
+        num_filters: 2
+        pool_size: 2
+        filter_size: [3, 3]
+        pool: False
+        pad: full
+
+nopool_b2:
+    name: nopool b2
+    type: archX
+    kwargs:
+        num_filters: 4
+        pool_size: 2
+        filter_size: [3, 3]
+        pool: False
+        pad: full
+
+nopool_b3:
+    name: nopool b3
+    type: archX
+    kwargs:
+        num_filters: 8
+        pool_size: 2
+        filter_size: [3, 3]
+        pool: False
+        pad: full
+
+nopool_b4:
+    name: nopool b4
+    type: archX
+    kwargs:
+        num_filters: 16
+        pool_size: 2
+        filter_size: [3, 3]
+        pool: False
+        pad: full
+
+nopool_b5:
+    name: nopool b5
+    type: archX
+    kwargs:
+        num_filters: 32
+        pool_size: 2
+        filter_size: [3, 3]
+        pool: False
+        pad: full
+
+nopool_b6:
+    name: nopool b6
+    type: archX
+    kwargs:
+        num_filters: 64
+        pool_size: 2
+        filter_size: [3, 3]
+        pool: False
+        pad: full
+
+nopool_b7:
+    name: nopool b7
+    type: archX
+    kwargs:
+        num_filters: 128
+        pool_size: 2
+        filter_size: [3, 3]
+        pool: False
+        pad: full
+
+nopool_c1:
+    name: nopool c1
+    type: archX
+    kwargs:
+        num_filters: 2
+        pool_size: 2
+        filter_size: [4, 4]
+        pool: False
+        pad: full
+
+nopool_c2:
+    name: nopool c2
+    type: archX
+    kwargs:
+        num_filters: 4
+        pool_size: 2
+        filter_size: [4, 4]
+        pool: False
+        pad: full
+
+nopool_c3:
+    name: nopool c3
+    type: archX
+    kwargs:
+        num_filters: 8
+        pool_size: 2
+        filter_size: [4, 4]
+        pool: False
+        pad: full
+
+nopool_c4:
+    name: nopool c4
+    type: archX
+    kwargs:
+        num_filters: 16
+        pool_size: 2
+        filter_size: [4, 4]
+        pool: False
+        pad: full
+
+nopool_c5:
+    name: nopool c5
+    type: archX
+    kwargs:
+        num_filters: 32
+        pool_size: 2
+        filter_size: [4, 4]
+        pool: False
+        pad: full
+
+nopool_c6:
+    name: nopool c6
+    type: archX
+    kwargs:
+        num_filters: 64
+        pool_size: 2
+        filter_size: [4, 4]
+        pool: False
+        pad: full
+
+nopool_c7:
+    name: nopool c7
+    type: archX
+    kwargs:
+        num_filters: 128
+        pool_size: 2
+        filter_size: [4, 4]
+        pool: False
         pad: full
