@@ -273,3 +273,12 @@ def run_full_fit(architecture, data, hvhdata, paramsdir, tune=True, save=True):
                     net.save_params(os.path.join(paramsdir, fname))
 
     return None
+
+
+# names = []
+# for letter in ['a', 'b', 'c', 'd']:
+#     for idx in range(1, 5):
+#         names.append('deep_{letter}{idx}'.format(letter=letter, idx=idx))
+#
+# for name in names:
+#     os.makedirs(os.path.join(paramsdir_, name[:-1]), exist_ok=True)
