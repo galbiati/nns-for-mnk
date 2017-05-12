@@ -23,7 +23,7 @@ a2:
             - [2, [2, 2]]
 
 a4:
-    name: a3
+    name: a4
     type: multiconvX_ws
     kwargs:
         subnet_specs:
