@@ -150,31 +150,53 @@ class DefaultTrainer(Trainer):
     Automatic parameter saving to be implemented later...
     """
 
+    def get_split_idxs(self, num_splits, split):
+        """
+        Generates an array for of split indices for training, validation,
+        and test sets, then returns training, validation, and test set indices
+        for input split.
+        """
+        split_array = np.tile(np.arange(num_splits), [num_splits, 1])               # stack [0 ... num_splits] x num_splits
+        split_array = (split_array + split_array.T) % num_splits                    # add transpose and modulo to rotate each row forward 1
+
+        train_idxs = split_array[split, :-2]                                        # train set idxs in row split, columns until last 2
+        val_idxs = split_array[split, -2:-1]                                        # second to last col is validation index
+        test_idxs = split_array[split, -1:]                                         # final col is test idx
+
+        return train_idxs, val_idxs, test_idxs
+
+
     def run_split(self, architecture, data, split, augment_fn):
+        """
+        Trains an architecture on a single training/validation/test split
+        Data is a tuple such as that returned by loading.default_loader()
+
+        Augmentation can be ignored by passing a a pass-through function as
+        augment_fn
+        """
+
         print("\nSplit Number {}".format(split))
-        D, groups, Xs, ys, Ss = data
-        num_splits = len(Xs)
-        r = np.tile(np.arange(num_splits), [num_splits, 1])
-        r = (r + r.T) % num_splits
 
-        train_idxs = r[split, :3] # you've hard-coded 5 splits here accidentally; revisit and fix at some point
-        val_idxs = r[split, 3:4]
-        test_idxs = r[split, 4:]
+        D, groups, Xs, ys, Ss = data                                                # unpack data tuple
+        num_splits = len(Xs)                                                        # Xs is a list with number of members = number of groups in data file
+        train_idxs, val_idxs, test_idxs = self.get_split_idxs(num_splits, split)    # get indices of splits in each group
 
-        X, y, S = [np.concatenate(np.array(Z)[train_idxs]) for Z in [Xs, ys, Ss]]
+        X, y, S = [np.concatenate(np.array(Z)[train_idxs]) for Z in [Xs, ys, Ss]]   # compile testing, validation, and training splits into single arrays
         Xv, yv, Sv = [np.concatenate(np.array(Z)[val_idxs]) for Z in [Xs, ys, Ss]]
         Xt, yt, St = [np.concatenate(np.array(Z)[test_idxs]) for Z in [Xs, ys, Ss]]
-        X, y = augment_fn((X, y))
-        S = np.concatenate([S, S, S, S])
-        print(Xt.shape)
 
-        net = Network(architecture)
-        self.train(net, training_data=(X, y), validation_data=(Xv, yv))
-        self.test(net, testing_data=(Xt, yt))
+        X, y = augment_fn((X, y))                                                   # augment training data
+        S = np.concatenate([S, S, S, S])                                            # subjects too
+
+        net = Network(architecture)                                                 # compile network
+        self.train(net, training_data=(X, y), validation_data=(Xv, yv))             # train network
+        self.test(net, testing_data=(Xt, yt))                                       # test network
 
         return net
 
-    def train_all(self, architecture, data, seed=None, save_params=False, augment_fn=augment):
+    def train_all(self, architecture, data,
+                    seed=None, save_params=False, augment_fn=augment):
+
         net_list = []
         if seed:
             np.random.seed(seed)
@@ -187,6 +209,7 @@ class DefaultTrainer(Trainer):
 
         mvs = bmvs([n.test_err for n in net_list ], alpha=.95)
         time_elapsed = time.time() - starttime
+
         print("\n\nOVERALL RESULTS")
         print("\tAverage NLL:\t\t{:.3f}".format(mvs[0][0]))
         print("\tCred. Interval:\t\t[{:.3f}, {:.3f}]".format(mvs[0][1][0], mvs[0][1][1]))
@@ -209,8 +232,8 @@ class FineTuner(DefaultTrainer):
 
         D, groups, Xs, ys, Ss = data
         num_splits = len(Xs)
-        r = np.tile(np.arange(num_splits), [num_splits, 1])
-        r = (r + r.T) % num_splits
+        train_idxs, val_idx, test_idxs = self.get_split_idxs(num_splits, split)
+
 
         starttime = time.time()
         net = Network(architecture)
@@ -220,9 +243,6 @@ class FineTuner(DefaultTrainer):
             if freeze:
                 net.freeze_params(exclude=exclude)
 
-        train_idxs = r[split, :3]
-        val_idxs = r[split, 3:4]
-        test_idxs = r[split, 4:]
 
         X, y, S = [np.concatenate(np.array(Z)[train_idxs]) for Z in [Xs, ys, Ss]]
         Xv, yv, Sv = [np.concatenate(np.array(Z)[val_idxs]) for Z in [Xs, ys, Ss]]
