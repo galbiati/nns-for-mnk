@@ -147,7 +147,6 @@ class DefaultTrainer(Trainer):
     self.train_all may be further decomposable -
     eg separate "unpack data" function...
 
-    Automatic parameter saving to be implemented later...
     """
 
     def get_split_idxs(self, num_splits, split):
@@ -196,19 +195,25 @@ class DefaultTrainer(Trainer):
 
     def train_all(self, architecture, data,
                     seed=None, save_params=False, augment_fn=augment):
+        """
+        Runs all training splits for a given architecture and caches trained
+        networks in a list.
+        """
 
-        net_list = []
+        net_list = []                                                               # initialize list
+
         if seed:
-            np.random.seed(seed)
+            np.random.seed(seed)                                                    # set random seed if provided
 
-        starttime = time.time()
+        starttime = time.time()                                                     # set start time
+
         num_splits = len(data[2])
         for split in range(num_splits):
             net = self.run_split(architecture, data, split, augment_fn)
             net_list.append(net)
 
-        mvs = bmvs([n.test_err for n in net_list ], alpha=.95)
-        time_elapsed = time.time() - starttime
+        mvs = bmvs([n.test_err for n in net_list ], alpha=.95)                      # get mean test performance after all splits complete
+        time_elapsed = time.time() - starttime                                      # check total elapsed time
 
         print("\n\nOVERALL RESULTS")
         print("\tAverage NLL:\t\t{:.3f}".format(mvs[0][0]))
@@ -227,6 +232,11 @@ class FineTuner(DefaultTrainer):
 
     def train_all(self, architecture, data, split, seed=None,
                     startparams=None, freeze=True, exclude=[-4]):
+
+        """
+        Fine tunes an architecture given an existing set of (trained) weights
+        Should be renamed "run_split" to be consistent with above
+        """
         if seed:
             np.random.seed(seed)
 
@@ -234,8 +244,12 @@ class FineTuner(DefaultTrainer):
         num_splits = len(Xs)
         train_idxs, val_idx, test_idxs = self.get_split_idxs(num_splits, split)
 
+        X, y, S = [np.concatenate(np.array(Z)[train_idxs]) for Z in [Xs, ys, Ss]]
+        Xv, yv, Sv = [np.concatenate(np.array(Z)[val_idxs]) for Z in [Xs, ys, Ss]]
+        Xt, yt, St = [np.concatenate(np.array(Z)[test_idxs]) for Z in [Xs, ys, Ss]]
+        X, y = augment((X, y))
+        S = np.concatenate([S, S, S, S])
 
-        starttime = time.time()
         net = Network(architecture)
         if startparams:
             _layers = L.layers.get_all_layers(net.net)
@@ -243,12 +257,8 @@ class FineTuner(DefaultTrainer):
             if freeze:
                 net.freeze_params(exclude=exclude)
 
+        starttime = time.time()
 
-        X, y, S = [np.concatenate(np.array(Z)[train_idxs]) for Z in [Xs, ys, Ss]]
-        Xv, yv, Sv = [np.concatenate(np.array(Z)[val_idxs]) for Z in [Xs, ys, Ss]]
-        Xt, yt, St = [np.concatenate(np.array(Z)[test_idxs]) for Z in [Xs, ys, Ss]]
-        X, y = augment((X, y))
-        S = np.concatenate([S, S, S, S])
         self.train(net, training_data=(X, y), validation_data=(Xv, yv))
         self.test(net, testing_data=(Xt, yt))
         time_elapsed = time.time() - starttime
