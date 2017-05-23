@@ -242,7 +242,7 @@ class FineTuner(DefaultTrainer):
 
         D, groups, Xs, ys, Ss = data
         num_splits = len(Xs)
-        train_idxs, val_idx, test_idxs = self.get_split_idxs(num_splits, split)
+        train_idxs, val_idxs, test_idxs = self.get_split_idxs(num_splits, split)
 
         X, y, S = [np.concatenate(np.array(Z)[train_idxs]) for Z in [Xs, ys, Ss]]
         Xv, yv, Sv = [np.concatenate(np.array(Z)[val_idxs]) for Z in [Xs, ys, Ss]]

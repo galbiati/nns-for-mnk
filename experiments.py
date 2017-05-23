@@ -73,7 +73,7 @@ def run_tuned_fit(architecture, data, hvhdata, paramsdir,
             for j in range(5):
 
                 fname = '{} {} agg fit exp 1-4 {} tune fit exp 0'.format(archname, i, j)
-                params = L.layers.get_all_param_values(n.net)
+                params = L.get_all_param_values(n.net)
                 net = tuner.run_split(
                     architecture=arch, data=hvhdata, split=j,
                     startparams=params, **tunekws
@@ -84,29 +84,83 @@ def run_tuned_fit(architecture, data, hvhdata, paramsdir,
 
     return None
 
-def run_bulk_fit(archname):
-    return None
+def run_bulk_fit(architecture, paramsdir):
+    """
+    Runs a single pass through the "bulk" training routine, which appends
+    supplementary data to each training split in hvhdata
+    """
+    import architectures as arches
+
+    name = architecture['name']
+    archfunc = getattr(arches, architecture['type'])
+    arch = lambda input_var=None: archfunc(input_var, **architecture['kwargs'])
+
+    trainer = DefaultTrainer(stopthresh=50, print_interval=50)
+
+    test_errs_ = []                                                                 # storage for test errors to monitor performance
+    filename_template = '{archname} bulk train {split_no} split.npz'
+
+    for split in range(5):
+        filename = filename_template.format(archname=name, split_no=split)
+
+        print(name, split)
+        train_idxs, val_idxs, test_idxs = trainer.get_split_idxs(5, split)
+
+        X, y = [np.concatenate(np.array(hvhdata[i])[train_idxs]) for i in [2, 3]]
+        X, y = [np.concatenate([Z, np.concatenate(np.array(data[i]))]) for Z, i in [(X, 2), (y, 3)]]    # add the extra data
+        Xv, yv = [np.concatenate(np.array(hvhdata[i])[val_idxs]) for i in [2, 3]]
+        Xt, yt = [np.concatenate(np.array(hvhdata[i])[test_idxs]) for i in [2, 3]]
+
+        net = Network(arch)
+        net.save_params(os.path.join(paramsdir, filename))
+        trainer.train(net, (X, y), (Xv, yv))
+        err, acc, bats = trainer.test(net, (Xt, yt))
+        test_errs_.append(err / bats)
+
+    return test_errs_
 
 def run_tuned_experiment(archnames):
     """
     Provided a list of architecture names (as in arch_specs.yaml),
     runs a full fit + fine tuning sequence with run_tuned_fit
+
+    Needs to check if directory exists, as in bulk fit
+    Consider making more pass-through parameters
     """
 
     for name in archnames:
         paramsdir = os.path.join(paramsdir_, name[:-1])
+        os.makedirs(paramsdir, exist_ok=True)                                       # create output directory if it does not exist
+
         architecture = arch_dict[name]
 
+        # print parameter count and architecture specification
         af = getattr(arches, architecture['type'])
         net = af(**architecture['kwargs'])
 
         print('Param count:', L.count_params(net))
         print(architecture)
 
+        # run tuned fit
         run_tuned_fit(architecture, data, hvhdata, paramsdir=paramsdir, tune=True)
 
-def run_bulk_experiment(archnames):
     return None
+
+def run_bulk_experiment(archnames):
+    """
+    Provided a list of arch names, runs a full fit sequence combining
+    all supplementary data with each split of hvhdata
+    """
+    test_errs = {}
+    for name in archnames:
+        paramsdir = os.path.join(paramsdir_, 'bulk_' + name[:-1])
+        os.makedirs(paramsdir, exist_ok=True)
+
+        architecture = arch_dict[name]
+
+        test_errs[name] = run_bulk_fit(architecture, paramsdir)
+
+    return test_errs
 
 def main(argv):
     pass
