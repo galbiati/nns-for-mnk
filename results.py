@@ -93,9 +93,9 @@ def compute_net_results(net, archname, test_data, df):
 
 
 def entropy_zets(zets):
-    z_ = np.histogram(zets, bins=np.arange(37), normed=True)[0]
-    z_ = z_[z_ > 0]
-    return -(z_ * np.log(z_)).sum()
+    z = np.histogram(zets, bins=np.arange(37), normed=True)[0]
+    z = z[z > 0]
+    return -(z * np.log2(z)).sum()
 
 def count_pieces(row):
     bp, wp = row[['bp', 'wp']]
