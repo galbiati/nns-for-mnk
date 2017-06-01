@@ -19,6 +19,7 @@ class Network(object):
     Things to consider doing:
         mod save/load to use named layers
         add self.unfreeze(params)
+        add self.reinitialize(layers)
     """
 
     def __init__(self, architecture):
