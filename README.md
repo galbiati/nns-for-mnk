@@ -2,9 +2,11 @@
 
 Requires: Python 3.x, pandas, numpy, Theano, lasagne
 
-Usage examples are in notebooks and run_fit.py.
+Usage examples are in notebooks and experiments.py.
 
-architecures.py contains custom layers and functions that define architectures for different networks.
+architectures.py contains custom layers and functions that define architectures for different networks.
+
+architectures.yaml provides handles to different architectures
 
 loading.py contains functions for loading data.
 
