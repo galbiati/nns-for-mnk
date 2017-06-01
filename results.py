@@ -24,11 +24,8 @@ def unfreeze(net):
 
     return None
 
-def compute_pretrained_results(archname, idx, test_data, fake=False):
+def compute_pretrained_results(net, archname, idx, test_data, fake=False):
     Xt, yt = test_data
-    arch = arch_dict[archname]
-    af = getattr(arches, arch['type'])
-    arch_func = lambda input_var: af(input_var, **arch['kwargs'])
 
     if fake:
         fname = '{} {} split fake data.npz'
@@ -42,31 +39,24 @@ def compute_pretrained_results(archname, idx, test_data, fake=False):
 
     results_df = pd.DataFrame(index=np.arange(Xt.shape[0]), columns=[idx])
 
-    net = Network(arch_func)
-
     net.load_params(os.path.join(paramsdir, fname))
 
     nlls = net.itemized_test_fn(Xt, yt)
     predictions = net.output_fn(Xt)
     results_df[idx] = nlls
 
-    n_params = L.count_params(net.net)
-    return results_df, predictions, n_params
+    return results_df, predictions
 
-def compute_tuned_results(archname, idx, test_idx, test_data, df):
+def compute_tuned_results(net, archname, idx, test_idx, test_data, df):
     Xt, yt = test_data
     group_idx = (test_idx - 1) % 5 # fix eventually to take df/groupidx/selection passed independently?
     selection = df.loc[df['group']==(group_idx+1)].index.values
     results_df = pd.DataFrame(index=np.arange(Xt.shape[0]), columns=[idx])
     predictions_df = pd.DataFrame(index=selection, columns=np.arange(36))
 
-    arch = arch_dict[archname]
-    af = getattr(arches, arch['type'])
-    arch_func = lambda input_var: af(input_var, **arch['kwargs'])
     fname = '{} {} agg fit exp 1-4 {} tune fit exp 0.npz'
     fname = fname.format(archname.replace('_', ' '), idx, test_idx)
 
-    net = Network(arch_func)
     net.load_params(os.path.join(paramsdir_, archname[:-1], fname))
 
     nlls = net.itemized_test_fn(Xt[selection, :, :, :], yt[selection])
@@ -74,3 +64,29 @@ def compute_tuned_results(archname, idx, test_idx, test_data, df):
     predictions_df.loc[selection, :] = predictions
     results_df.loc[selection, idx] = nlls
     return results_df, predictions_df
+
+
+def compute_net_results(net, archname, test_data, df):
+    pretrain_results = []
+    pretrain_predictions = []
+    tune_results = []
+    tune_predictions = []
+
+    print('pretrained results', archname)
+    for idx in range(5):
+        results_df, predictions_df = compute_pretrained_results(net, archname, idx, test_data)
+        pretrain_results.append(results_df)
+        pretrain_predictions.append(predictions_df)
+
+    pretrain_results = pd.concat(pretrain_results, axis=1)
+
+    print('tuned results', archname)
+    for idx in range(5):
+        for test_idx in range(5):
+            results_df, predictions_df  = compute_tuned_results(net, archname, idx, test_idx, test_data, df)
+            tune_results.append(results_df)
+            tune_predictions.append(predictions_df)
+
+    tune_results = pd.concat(tune_results, axis=1, join='inner').stack().unstack()
+
+    return pretrain_results, pretrain_predictions, tune_results, tune_predictions
