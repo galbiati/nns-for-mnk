@@ -90,3 +90,16 @@ def compute_net_results(net, archname, test_data, df):
     tune_results = pd.concat(tune_results, axis=1, join='inner').stack().unstack()
 
     return pretrain_results, pretrain_predictions, tune_results, tune_predictions
+
+
+def entropy_zets(zets):
+    z_ = np.histogram(zets, bins=np.arange(37), normed=True)[0]
+    z_ = z_[z_ > 0]
+    return -(z_ * np.log(z_)).sum()
+
+def count_pieces(row):
+    bp, wp = row[['bp', 'wp']]
+    n_bp = np.array(list(bp)).astype(int).sum()
+    n_wp = np.array(list(wp)).astype(int).sum()
+
+    return n_bp + n_wp
