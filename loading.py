@@ -5,17 +5,26 @@ def read_datafile(filename):
     """Read a data file into a pandas dataframe"""
     columns = ['subject', 'color', 'bp', 'wp', 'zet', 'rt', 'group']
     data = pd.read_csv(filename, names=columns)
-    c = data.color == 1
+    c = data['color'] == 1
     data.loc[c, ['bp', 'wp']] = data.loc[c, ['wp', 'bp']].values
     return data
 
 def X_decoder(x):
-    """X decoder transforms board bytestring reps into 4x9 arrays"""
-    decoder = lambda x: np.array(list(x)).astype(int).reshape([4,9])
-    return np.array(list(map(decoder, x)))
+    """
+    X_decoder transforms board bytestring representations into 4x9 arrays
+
+    Expects an iterable
+    Consider reimplementing for use with np.apply_along_axis or similar?
+    """
+
+    decoder = lambda bytestring: np.array(list(bytestring)).astype(int).reshape([4,9]) # do this to each element of x
+    return np.array(list(map(decoder, x)))                                          # apply decoder
 
 def unpack_data(df):
-    """Convert dataframe into separate tensors and vectors"""
+    """
+    Convert dataframe into separate tensors and vectors for respective variables
+    """
+
     bp = X_decoder(df['bp'].values)
     wp = X_decoder(df['wp'].values)
     X = np.zeros([bp.shape[0], 2, bp.shape[1], bp.shape[2]], dtype=np.float32)
@@ -27,7 +36,7 @@ def unpack_data(df):
     Np = X.sum(axis=(1, 2, 3))
     return X, y, S, G, Np
 
-def custom_split(data, splitsize=5):
+def random_split(data, splitsize=5):
     raise NotImplementedError
 
 def augment(D):
@@ -35,6 +44,7 @@ def augment(D):
     Augment adds reflections to all boards and responses
     D is a tuple with X input tensor and y target vector
     """
+
     X, y = D
     n = y.shape[0]
     X = np.concatenate([X, X[:, :, :, ::-1], X[:, :, ::-1, :], X[:, :, ::-1, ::-1]])
@@ -49,11 +59,14 @@ def augment(D):
 
 def default_loader(filename, subject=None):
     """
-    Loads data into 5 cross-validation groups as listed in datafilede
+    Loads data into 5 cross-validation groups as listed in datafiles
     """
+
     F = read_datafile(filename)
+
     if subject is not None:
         F = F.loc[F['subject'] == subject, :]
+
     X, y, S, G, Np = unpack_data(F)
 
     groups = [np.where(G==g)[0] for g in np.arange(5)]
