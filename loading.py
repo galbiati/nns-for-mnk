@@ -3,6 +3,7 @@ import pandas as pd
 
 def read_datafile(filename):
     """Read a data file into a pandas dataframe"""
+    
     columns = ['subject', 'color', 'bp', 'wp', 'zet', 'rt', 'group']
     data = pd.read_csv(filename, names=columns)
     c = data['color'] == 1

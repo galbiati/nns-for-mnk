@@ -142,31 +142,6 @@ def make_subnets(network, input_var, subnet_func=subnet, subnet_specs=None):
     ]
     return subnets
 
-def multiconvX_ws_tanh(input_var=None, subnet_specs=None):
-    if subnet_specs is None:
-        subnet_specs = [
-            (1, (1, 4)), (1, (4, 1)), (1, 4, 4),
-            (1, (1, 4)), (1, (4, 1)), (1, 4, 4),
-            (1, (1, 4)), (1, (4, 1)), (1, 4, 4)
-        ]
-
-    FixLayer = make_FixLayer(input_var)
-    input_shape = (None, 2, 4, 9)
-
-    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
-
-    subnets = make_subnets(
-        input_layer, input_var,
-        subnet_func=tanh_subnet, subnet_specs=subnet_specs
-    )
-
-    network = WeightedSumLayer(subnets)
-    network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
-    network = FixLayer(network)
-    network = ReNormLayer(network)
-
-    return network
-
 
 def multiconvX_ws(input_var=None, subnet_specs=None):
     """Columnar architecture WITH feature value weighting"""
@@ -191,6 +166,33 @@ def multiconvX_ws(input_var=None, subnet_specs=None):
     network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
     network = FixLayer(network)
     network = ReNormLayer(network)
+    return network
+
+
+def multiconvX_ws_tanh(input_var=None, subnet_specs=None):
+    """Columnar architecture with feature value weighting and tanh activation"""
+    if subnet_specs is None:
+        subnet_specs = [
+            (1, (1, 4)), (1, (4, 1)), (1, 4, 4),
+            (1, (1, 4)), (1, (4, 1)), (1, 4, 4),
+            (1, (1, 4)), (1, (4, 1)), (1, 4, 4)
+        ]
+
+    FixLayer = make_FixLayer(input_var)
+    input_shape = (None, 2, 4, 9)
+
+    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
+
+    subnets = make_subnets(
+        input_layer, input_var,
+        subnet_func=tanh_subnet, subnet_specs=subnet_specs
+    )
+
+    network = WeightedSumLayer(subnets)
+    network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
+    network = FixLayer(network)
+    network = ReNormLayer(network)
+
     return network
 
 
@@ -261,7 +263,7 @@ def archX_deep(input_var=None,
     """
     Stack archX two deep
     """
-    
+
     input_shape = (None, 2, 4, 9)
     FixLayer = make_FixLayer(input_var)
     input_layer = L.InputLayer(shape=input_shape, input_var=input_var)

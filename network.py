@@ -1,25 +1,31 @@
 import numpy as np
 import theano
-import lasagne as L
+import lasagne
 
+## ALIASES ##
+L = lasagne.layers
 T = theano.tensor
-get_output = L.layers.get_output
-get_all_params = L.layers.get_all_params
-cross_entropy = L.objectives.categorical_crossentropy
-get_layers = L.layers.get_all_layers
+get_output = L.get_output
+get_all_params = L.get_all_params
+cross_entropy = lasagne.objectives.categorical_crossentropy
+get_layers = L.get_all_layers
+
 
 class Network(object):
     """
-    Base for subclassing networks for MNK
+    Wrapper for neural networks for MNK that automates network compilation and
+    provides some conveninece functions for freezing, saving, and loading params
 
     Things to consider doing:
         mod save/load to use named layers
+        add self.unfreeze(params)
     """
+
     def __init__(self, architecture):
         self.architecture = architecture
         self.input_var = T.tensor4('inputs')
         self.target_var = T.ivector('targets')
-        self.update_algo = L.updates.adam # just a default
+        self.update_algo = lasagne.updates.adam # just a default
         self.build()
         self.objectives()
         self.compile_functions()
@@ -109,7 +115,7 @@ class Network(object):
         """
         Save parameters for reuse later
         """
-        all_params = L.layers.get_all_param_values(self.net)
+        all_params = L.get_all_param_values(self.net)
         np.savez(param_file, *all_params)
         return None
 
@@ -121,6 +127,6 @@ class Network(object):
             params_list = [(i[0], i[1]) for i in loaded.items()]
             params_order = np.array([i[0][4:6] for i in params_list]).astype(int)
             params_list = [params_list[i] for i in params_order.argsort()]
-            L.layers.set_all_param_values(self.net, [i[1] for i in params_list])
+            L.set_all_param_values(self.net, [i[1] for i in params_list])
 
         return None

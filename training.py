@@ -1,12 +1,13 @@
 import os
 import numpy as np
 import theano
-import lasagne as L
+import lasagne
 import time
-from scipy.stats import bayes_mvs as bmvs
+from scipy.stats import bayes_mvs
 from loading import augment
 from network import Network
 
+L = lasagne.layers
 T = theano.tensor
 
 class Trainer(object):
@@ -20,7 +21,7 @@ class Trainer(object):
         an X, y tuple
     """
     def __init__(self, batchsize=128, stopthresh=100, print_interval=50,
-                updates=L.updates.adam, update_args={}, seed=None):
+                updates=lasagne.updates.adam, update_args={}, seed=None):
         """
         ToDos:
         - More options?
@@ -37,6 +38,7 @@ class Trainer(object):
         rate, momentum, etc)
         - seed: random seed for repeating experiment
         """
+
         self.updates = updates
         self.bs = batchsize
         self.epoch = 0
@@ -54,6 +56,7 @@ class Trainer(object):
         It might be better to abstract the training and validation loops into
         their own functions, but not a priority for now
         """
+
         network.updates = self.updates(network.loss, network.params, **self.update_args)
         X, y = training_data
         Xv, yv = validation_data
@@ -87,6 +90,7 @@ class Trainer(object):
 
             self.epoch = epoch
             del_val_err = np.diff(network.val_trace)
+
             if epoch > self.stopthresh:
                 if del_val_err[epoch-self.stopthresh:epoch].mean() > 0:
                     print("Abandon ship!")
@@ -135,6 +139,7 @@ class Trainer(object):
                 excerpt = slice(idx, idx+self.bs)
             yield inputs[excerpt], targets[excerpt]
 
+
 class DefaultTrainer(Trainer):
     """
     Implements an additional function that does training for all 5 default
@@ -144,9 +149,8 @@ class DefaultTrainer(Trainer):
     implementing a basic train_all function that does random cv splits rather
     than premade...
 
-    self.train_all may be further decomposable -
-    eg separate "unpack data" function...
-
+    self.train_all may be further decomposable
+    (eg separate "unpack data" function...)
     """
 
     def get_split_idxs(self, num_splits, split):
@@ -155,6 +159,7 @@ class DefaultTrainer(Trainer):
         and test sets, then returns training, validation, and test set indices
         for input split.
         """
+
         split_array = np.tile(np.arange(num_splits), [num_splits, 1])               # stack [0 ... num_splits] x num_splits
         split_array = (split_array + split_array.T) % num_splits                    # add transpose and modulo to rotate each row forward 1
 
@@ -193,6 +198,7 @@ class DefaultTrainer(Trainer):
 
         return net
 
+
     def train_all(self, architecture, data,
                     seed=None, save_params=False, augment_fn=augment):
         """
@@ -212,7 +218,7 @@ class DefaultTrainer(Trainer):
             net = self.run_split(architecture, data, split, augment_fn)
             net_list.append(net)
 
-        mvs = bmvs([n.test_err for n in net_list ], alpha=.95)                      # get mean test performance after all splits complete
+        mvs = bayes_mvs([n.test_err for n in net_list ], alpha=.95)                      # get mean test performance after all splits complete
         time_elapsed = time.time() - starttime                                      # check total elapsed time
 
         print("\n\nOVERALL RESULTS")
@@ -232,11 +238,11 @@ class FineTuner(DefaultTrainer):
 
     def run_split(self, architecture, data, split, seed=None,
                     startparams=None, freeze=True, exclude=[-4]):
-
         """
         Fine tunes an architecture given an existing set of (trained) weights
         Should be renamed "run_split" to be consistent with above
         """
+
         if seed:
             np.random.seed(seed)
 
@@ -252,8 +258,8 @@ class FineTuner(DefaultTrainer):
 
         net = Network(architecture)
         if startparams:
-            _layers = L.layers.get_all_layers(net.net)
-            L.layers.set_all_param_values(_layers, startparams)
+            _layers = L.get_all_layers(net.net)
+            L.set_all_param_values(_layers, startparams)
             if freeze:
                 net.freeze_params(exclude=exclude)
 
@@ -264,14 +270,3 @@ class FineTuner(DefaultTrainer):
         time_elapsed = time.time() - starttime
 
         return net
-
-
-
-
-# names = []
-# for letter in ['a', 'b', 'c', 'd']:
-#     for idx in range(1, 5):
-#         names.append('deep_{letter}{idx}'.format(letter=letter, idx=idx))
-#
-# for name in names:
-#     os.makedirs(os.path.join(paramsdir_, name[:-1]), exist_ok=True)
