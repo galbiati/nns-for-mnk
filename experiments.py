@@ -163,6 +163,7 @@ def run_bulk_experiment(archnames):
     return test_errs
 
 def main(argv):
+    """Pass network name and experiment type on command line"""
     pass
 
 if __name__ == '__main__':
