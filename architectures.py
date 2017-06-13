@@ -1,6 +1,8 @@
 import theano
 import lasagne
 
+"""TODO: in future, separate base classes from architecture specs"""
+
 ### ALIASES ###
 T = theano.tensor
 L = lasagne.layers
@@ -9,7 +11,7 @@ nl = lasagne.nonlinearities
 ### NONLINEARITIES ETC###
 def binarize(input_tensor):
     """Convert input to el {0, 1}"""
-    return input_tensor >= .5
+    return T.cast(input_tensor >= .5, theano.config.floatX)
 
 
 def sum_count_conv(input, W, input_shape, W_shape, **kwargs):
@@ -37,7 +39,7 @@ def sum_count_conv(input, W, input_shape, W_shape, **kwargs):
     comparand = comparand.dimshuffle(0, 3, 2, 1)
 
     return T.eq(conved, comparand)
-    
+
 
 ### LAYERS ###
 def make_FixLayer(input_var):
@@ -79,15 +81,6 @@ class BinConvLayer(L.Conv2DLayer):
         )
 
         return conved
-
-
-class FeatureCountLayer(BinConvLayer):
-    """
-    Counts the number of feature occurrences at different locations
-
-    Do not provide an additional nonlinearity; apply any desired with a
-    nonlinearity layer
-    """
 
 
 class WeightedSumLayer(L.ElemwiseMergeLayer):
@@ -155,8 +148,9 @@ def subnet(network, input_var,
     return net
 
 
-def tanh_subnet(network, input_var,
-                num_filters=4, filter_size=(4, 4), pad='valid'):
+def subnet2(network, input_var,
+                num_filters=4, filter_size=(4, 4), pad='valid',
+                densekws={'nonlinearity': nl.tanh}):
     """
     Sigmoid subnet uses sigmoid activation on value layer to make values more
     interpretable
@@ -172,8 +166,8 @@ def tanh_subnet(network, input_var,
     net = L.DropoutLayer(net, p=.125, shared_axes=(2, 3))
     net = L.FeaturePoolLayer(net, pool_function=T.sum, pool_size=num_filters)
     net = L.DenseLayer(
-        net, num_units=36,
-        nonlinearity=nl.tanh, W=lasagne.init.GlorotUniform(gain=1.0)
+        net,
+        num_units=36, W=lasagne.init.GlorotUniform(gain=1.0), **denskws
     )
 
     net = L.DropoutLayer(net, p=.125)
@@ -243,12 +237,10 @@ def multiconvX_ws_tanh(input_var=None, subnet_specs=None):
 
     input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
 
-    subnets = make_subnets(
-        input_layer, input_var,
-        subnet_func=tanh_subnet, subnet_specs=subnet_specs
-    )
+    subnets = make_subnets(input_layer, input_var, subnet_specs=subnet_specs)
 
     network = WeightedSumLayer(subnets)
+    network = L.NonlinearityLayer(network, nonlinearity=nl.tanh)
     network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
     network = FixLayer(network)
     network = ReNormLayer(network)
@@ -308,6 +300,36 @@ def archX(input_var=None, num_filters=32, pool_size=2, filter_size=(4,4), pool=T
         nonlinearity=nl.very_leaky_rectify, W=lasagne.init.HeUniform(gain='relu')
     )
     network = FixLayer(network)
+    network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
+    network = FixLayer(network)
+    network = ReNormLayer(network)
+
+    return network
+
+
+def archX_binconv(input_var=None,
+                    num_filters=32, filter_size=(4, 4), pad='full',
+                    pool_size=2, pool=True):
+
+    input_shape = (None, 2, 4, 9)
+    FixLayer = make_FixLayer(input_var)
+
+    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
+    network = BinConvLayer(
+        input_layer,
+        num_filters=num_filters, filter_size=filter_size, pad=pad,
+        nonlinearity=nl.very_leaky_rectify
+    )
+
+    if pool:
+        network = L.FeaturePoolLayer(network, pool_function=T.sum, pool_size=pool_size)
+
+    network = L.DropoutLayer(network, p=.125, shared_axes=(2, 3))
+    network = L.DenseLayer(
+        network,
+        num_units=36,
+        W=lasagne.init.HeUniform(gain='relu'), nonlinearity=nl.tanh
+    )
     network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
     network = FixLayer(network)
     network = ReNormLayer(network)
