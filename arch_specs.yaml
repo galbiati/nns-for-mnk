@@ -935,3 +935,13 @@ nopool_c7:
         filter_size: [4, 4]
         pool: False
         pad: full
+
+binconv_nopool_c5:
+    name: binconv nopool c7
+    type: archX_binconv
+    kwargs:
+        num_filters: 32
+        pool_size: 2
+        filter_size: [4, 4]
+        pool: False
+        pad: full
