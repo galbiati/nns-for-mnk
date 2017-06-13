@@ -112,6 +112,16 @@ class Network(object):
 
         return None
 
+    def unfreeze_params(self):
+        """
+        Sets all parameters back to trainable
+        """
+        for layer in L.get_all_layers(self.net):
+            for param in layer.params:
+                layer.params[param].add('trainable')
+        self.params = L.get_all_params(self.net, trainable=True)
+        return None
+
     def save_params(self, param_file):
         """
         Save parameters for reuse later

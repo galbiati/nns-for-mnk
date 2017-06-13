@@ -15,15 +15,6 @@ paramsdir_ = os.path.join(headdir, 'Analysis/0_hvh/Params/nnets/')
 with open('arch_specs.yaml') as archfile:
     arch_dict = yaml.load(archfile)
 
-def unfreeze(net):
-    # move this function onto Network class!
-    for layer in L.get_all_layers(net.net):
-        for param in layer.params:
-            layer.params[param].add('trainable')
-    net.params = L.get_all_params(net.net, trainable=True)
-
-    return None
-
 def compute_pretrained_results(net, archname, idx, test_data, fake=False):
     Xt, yt = test_data
 
