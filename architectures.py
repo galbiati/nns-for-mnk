@@ -6,6 +6,27 @@ T = theano.tensor
 L = lasagne.layers
 nl = lasagne.nonlinearities
 
+### NONLINEARITIES ETC###
+def binarize(input_tensor):
+    """Convert input to el {0, 1}"""
+    return input_tensor >= .5
+
+def sum_count_conv(input, W, input_shape, W_shape, **kwargs):
+    W_sum = W.get_value().sum(axis=-1).sum(axis=-1)
+    conved = T.nnet.conv2d(
+        input, W, input_shape, W_shape,
+        subsample=subsample, border_mode=border_mode, filter_flip=filter_flip
+    )
+
+    comparand = T.tile(
+        W_sum,
+        (conved.shape[0], conved.shape[2], conved.shape[3], 1)
+    )
+
+    comparand = comparand.dimshuffle(0, 3, 2, 1)
+
+    return T.eq(conved, comparand)
+
 ### LAYERS ###
 def make_FixLayer(input_var):
     """
@@ -28,6 +49,33 @@ def make_FixLayer(input_var):
             return numer
 
     return FixLayer
+
+
+class BinConvLayer(L.Conv2DLayer):
+    """
+    Binarizes weights before computing convolution
+    """
+
+    def convolve(self, input, **kwargs):
+        border_mode = 'half' if self.pad == 'same' else self.pad
+        binarized = binarize(self.W)
+        conved = self.convolution(input, binarized,
+            self.input_shape, self.get_W_shape(),
+            subsample=self.stride,
+            border_mode=border_mode,
+            filter_flip=self.flip_filters
+        )
+
+        return conved
+
+
+class FeatureCountLayer(BinConvLayer):
+    """
+    Counts the number of feature occurrences at different locations
+
+    Do not provide an additional nonlinearity; apply any desired with a
+    nonlinearity layer
+    """
 
 
 class WeightedSumLayer(L.ElemwiseMergeLayer):
