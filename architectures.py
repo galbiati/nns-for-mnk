@@ -11,7 +11,18 @@ def binarize(input_tensor):
     """Convert input to el {0, 1}"""
     return input_tensor >= .5
 
+
 def sum_count_conv(input, W, input_shape, W_shape, **kwargs):
+    """
+    After convolving, checks each filter map (per channel) to determine if
+    feature activation equals weight sum
+
+    Meant for use with binarized filters,
+    resulting in an on/off "feature detector"
+
+    Not sure what happens without binarized features, but likely not what you
+    wanted!
+    """
     W_sum = W.get_value().sum(axis=-1).sum(axis=-1)
     conved = T.nnet.conv2d(
         input, W, input_shape, W_shape,
@@ -26,6 +37,7 @@ def sum_count_conv(input, W, input_shape, W_shape, **kwargs):
     comparand = comparand.dimshuffle(0, 3, 2, 1)
 
     return T.eq(conved, comparand)
+    
 
 ### LAYERS ###
 def make_FixLayer(input_var):
