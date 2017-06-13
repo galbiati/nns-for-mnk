@@ -11,6 +11,8 @@ from training import *
 from network import *
 import architectures as arches
 
+"""Reorganize this to put experiments together, rather than functiont types"""
+
 # aliases
 L = lasagne.layers
 nl = lasagne.nonlinearities
@@ -28,6 +30,8 @@ hvhdata = loading.default_loader(os.path.join(datadir, '0 (with groups).csv'))
 Xs = np.concatenate(hvhdata[2])                                                     # hvhdata[2] is a list of 5 sets of Xs, per CV group provided in data files
 ys = np.concatenate(hvhdata[3])
 Ss = np.concatenate(hvhdata[4])
+
+fake_data = loading.default_loader(os.path.join(datadir, 'fake news (with groups).csv'))
 
 # load network specs
 with open('arch_specs.yaml') as archfile:
@@ -119,6 +123,46 @@ def run_bulk_fit(architecture, paramsdir):
 
     return test_errs_
 
+def run_fake_fit(architecture, paramsdir):
+
+    # load archictecture
+    import architectures as arches
+
+    name = architecture['name']
+    archfunc = getattr(arches, architecture['type'])
+    arch = lambda input_var: archfunc(input_var, **architecture['kwargs'])
+
+    # train networks on split data
+    trainer = DefaultTrainer(stopthresh=50, print_interval=25)
+    net_list = trainer.train_all(architecture=arch, data=fake_data, seed=985227)
+
+    # testing
+    idx_test_map = {0: 5, 1: 1, 2: 2, 3: 3, 4: 4}
+    hD = hvhdata[0]     # data frame
+    hX = hvhdata[2]
+    hy = hvhdata[3]
+    hP = pd.DataFrame(index=hD.index, columns=list(range(36)))      # predictions DF
+
+    for i, net in enumerate(net_list):
+        test_group = idx_test_map[i]
+        test_loc = hD['group'] == test_group
+
+        idx_ = test_group - 1
+        nll = net.itemized_test_fn(hX[idx_], hy[3][idx_])
+        pred = net.output_fn(hX[2][idx_])
+
+        hD.loc[test_loc, 'nll'] = nll
+        hP.loc[test_loc] = pred
+
+        fname = '{} {} split fake data.npz'.format('bulk_' + name, i)
+        net.save_params(os.path.join(paramsdir_, 'fake_' + name, fname))
+
+    hD.to_csv(os.path.join(resultsdir, 'fake', 'nlls.csv'), index=False)
+    hDmeans = hD.pivot_table(index='subject', values='nll')
+
+    return hDmeans.mean()
+
+
 def run_tuned_experiment(archnames):
     """
     Provided a list of architecture names (as in arch_specs.yaml),
@@ -159,6 +203,22 @@ def run_bulk_experiment(archnames):
         architecture = arch_dict[name]
 
         test_errs[name] = run_bulk_fit(architecture, paramsdir)
+
+    return test_errs
+
+def run_fake_experiment(archnames):
+    """
+    Runs fit for all archnames by training on fake data
+    """
+
+    test_errs = {}
+    for name in archnames:
+        paramsdir = os.path.join(paramsdir_, 'fake_' + name[:-1])
+        os.makedirs(paramsdir, exist_ok=True)
+
+        architecture = arch_dict[name]
+
+        test_errs[name] = run_fake_fit(architecture, paramsdir)
 
     return test_errs
 
