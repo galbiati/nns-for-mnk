@@ -10,11 +10,17 @@ nl = lasagne.nonlinearities
 
 ### NONLINEARITIES ETC###
 def binarize(input_tensor):
-    """Convert input to el {0, 1}"""
+    """
+    Convert input to el {0, 1}
+
+    Might be better to achieve this by
+    forcing boolean shared on ConvLayer subclass 
+    """
     return T.cast(input_tensor >= .5, theano.config.floatX)
 
 
-def sum_count_conv(input, W, input_shape, W_shape, **kwargs):
+def sum_count_conv(input, W, input_shape, W_shape,
+                    subsample=None, border_mode=None, filter_flip=None):
     """
     After convolving, checks each filter map (per channel) to determine if
     feature activation equals weight sum
@@ -24,8 +30,10 @@ def sum_count_conv(input, W, input_shape, W_shape, **kwargs):
 
     Not sure what happens without binarized features, but likely not what you
     wanted!
+
+    Does not currently work due to dim mismatch error; debugging soon
     """
-    W_sum = W.get_value().sum(axis=-1).sum(axis=-1)
+    W_sum = W.sum(axis=-1).sum(axis=-1)
     conved = T.nnet.conv2d(
         input, W, input_shape, W_shape,
         subsample=subsample, border_mode=border_mode, filter_flip=filter_flip
@@ -318,7 +326,8 @@ def archX_binconv(input_var=None,
     network = BinConvLayer(
         input_layer,
         num_filters=num_filters, filter_size=filter_size, pad=pad,
-        nonlinearity=nl.very_leaky_rectify
+        # convolution=sum_count_conv,
+        nonlinearity=nl.identity
     )
 
     if pool:
@@ -327,8 +336,14 @@ def archX_binconv(input_var=None,
     network = L.DropoutLayer(network, p=.125, shared_axes=(2, 3))
     network = L.DenseLayer(
         network,
+        num_units=128,
+        W=lasagne.init.HeUniform(gain='relu'), nonlinearity=nl.very_leaky_rectify
+    )
+    network = L.DropoutLayer(network, p=.5)
+    network = L.DenseLayer(
+        network,
         num_units=36,
-        W=lasagne.init.HeUniform(gain='relu'), nonlinearity=nl.tanh
+        W=lasagne.init.HeUniform(gain='relu'), nonlinearity=nl.very_leaky_rectify
     )
     network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
     network = FixLayer(network)

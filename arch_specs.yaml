@@ -936,11 +936,11 @@ nopool_c7:
         pool: False
         pad: full
 
-binconv_nopool_c5:
+binconv_nopool_c7:
     name: binconv nopool c7
     type: archX_binconv
     kwargs:
-        num_filters: 32
+        num_filters: 128
         pool_size: 2
         filter_size: [4, 4]
         pool: False
