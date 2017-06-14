@@ -6,6 +6,7 @@ T = theano.tensor
 L = lasagne.layers
 nl = lasagne.nonlinearities
 
+
 ### NONLINEARITIES ETC###
 def binarize(input_tensor):
     """
@@ -46,7 +47,10 @@ def sum_count_conv(input, W, input_shape, W_shape,
 
     return T.eq(conved, comparand)
 
+
 ### LAYERS ###
+
+
 def make_FixLayer(input_var):
     """
     Creates a layer that "fixes" a value distribution for a given input size
@@ -202,7 +206,7 @@ def make_subnets(network, input_var, subnet_func=subnet, subnet_specs=None):
 
 def output_layers(incoming, prefilter=False):
     """Applies softmax and filters illegal moves"""
-    
+
     if prefilter:
         network = FixLayer(incoming)
         network = L.NonlinearityLayer(network, nonlinearity=nl.softmax)
