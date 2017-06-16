@@ -22,15 +22,18 @@ def autoencoder(input_var=None,
         num_filters=num_filters, filter_size=filter_size, pad=pad,
         nonlinearity=nl.tanh
     )
+    conv1_d = L.DropoutLayer(conv1, p=.0625, shared_axes=(2, 3))
 
-    latent = L.DenseLayer(conv1, num_units=num_units, nonlinearity=nl.rectify)
+    latent = L.DenseLayer(conv1_d, num_units=latent_size, nonlinearity=nl.rectify)
+    latent_d = L.DropoutLayer(latent, p=.25)
 
     # decode
-    latent_decode = L.InverseLayer(latent, latent)
-    unconv1 = L.InverseLayer(latent_decode, conv1)
+    latent_decode = L.InverseLayer(latent_d, latent)
+    latent_decode_d = L.DropoutLayer(latent_decode, p=.0625, shared_axes=(2, 3))
+    unconv1 = L.InverseLayer(latent_decode_d, conv1)
 
     # predict
-    values = L.DenseLayer(latent, num_units=36, nonlinearity=nl.rectify)
+    values = L.DenseLayer(latent_d, num_units=36, nonlinearity=nl.rectify)
     prediction = output_layers(values, FixLayer, prefilter=False)
 
-    return unconv1, prediction
+    return unconv1, values, prediction

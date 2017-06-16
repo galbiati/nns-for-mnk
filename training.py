@@ -270,3 +270,96 @@ class FineTuner(DefaultTrainer):
         time_elapsed = time.time() - starttime
 
         return net
+        
+
+class AutoencoderTrainer(DefaultTrainer):
+    def train_autoencoder(self, net, X):
+        X = np.concatenate([X, X[:, :, ::-1, :], X[:, :, :, ::-1], X[:, :, ::-1, ::-1]]) # augment
+        idxs = np.arange(X.shape[0])
+        np.random.shuffle(idxs)
+
+        Xv = X[idxs[:X.shape[0]//10], :, :, :]
+        Xtr = X[idxs[X.shape[0]//10]:, :, :, :]
+
+        training_start = time.time()
+
+        validation_trace = []
+
+        for epoch in range(self.max_epoch):
+            training_error = 0
+            training_batches = 0
+            validation_error = 0
+            validation_batches = 0
+            epoch_start = time.time()
+
+            for batch in self.iterate_minibatches(Xtr, Xtr, shuffle=True):
+                inputs, targets = batch
+                training_error += net.ae_train_fn(inputs, targets)
+                training_batches += 1
+
+            epoch_duration = time.time() - epoch_start
+
+            for batch in self.iterate_minibatches(Xv, Xv, shuffle=False):
+                inputs, targets = batch
+                validation_error += net.ae_test_fn(inputs, targets)
+                validation_batches += 1
+
+            net.ae_training_error = training_error / training_batches
+            net.ae_validation_error = validation_error / validation_batches
+            validation_trace.append(net.ae_validation_error)
+
+            if epoch > self.stopthresh:
+                if np.mean(validation_trace[epoch-self.stopthresh:epoch]) > 0:
+                    print('Abandon ship!')
+                    break
+
+            if epoch % self.print_interval == 0:
+                print("Epoch {} took {:.3f}s".format(epoch, epoch_duration))
+                print("\ttraining loss:\t\t\t{:.4f}".format(net.ae_training_error))
+                print("\tvalidation loss:\t\t{:.4f}".format(net.ae_validation_error))
+                print("\ttotal time elapsed:\t\t{:.3f}s".format(time.time() - training_start))
+
+        return None
+
+    def run_split(self, net, data, split, augment_fn):
+        print('\nSplit Number {}'.format(split))
+        D, groups, Xs, ys, Ss = data
+        num_splits = len(Xs)
+        train_idxs, val_idxs, test_idxs = self.get_split_idxs(nump_splits, split)
+
+        X, y, S = [np.concatenate(np.array(Z)[train_idxs]) for Z in [Xs, ys, Ss]]   # compile testing, validation, and training splits into single arrays
+        Xv, yv, Sv = [np.concatenate(np.array(Z)[val_idxs]) for Z in [Xs, ys, Ss]]
+        Xt, yt, St = [np.concatenate(np.array(Z)[test_idxs]) for Z in [Xs, ys, Ss]]
+
+        X, y = augment_fn((X, y))                                                   # augment training data
+        S = np.concatenate([S, S, S, S])
+
+        self.train(net, training_data=(X, y), validation_data=(Xv, yv))
+        self.test(net, testing_data=(Xt, yt))
+
+        return net
+
+
+    def train_all(self, architecture, data, seed=None, save_params=False, augment_fn=augment):
+        net_list = []
+
+        if seed:
+            np.random.seed(seed)
+
+        net = Autoencoder(architecture)
+        ae_start_params = L.get_all_param_values(net.autoencoder)
+
+        Xs = np.concatenate(data[2])
+        self.train_autoencoder(net, Xs)
+        ae_params = L.get_all_param_values(net.autoencoder)
+        net.freeze_params(exclude=list(range(-7, 0)))
+
+        start_params = L.get_all_param_values(net.net)            # cache params to avoid recompiling
+
+        num_splits = len(data[2])
+        for split in range(num_splits):
+            L.set_all_param_values(net.net, start_params)
+            net = self.run_split(net, data, split, augment_fn)
+            net_list.append(L.get_all_param_values(net.net))      # save params instead of full network to list
+
+        return net_list

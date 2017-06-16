@@ -91,12 +91,15 @@ class Network(object):
         self.trace_loc += 1 # so hacky
         return None
 
-    def freeze_params(self, exclude=None):
+    def freeze_params(self, net=None, exclude=None):
         """
         Sets params to be untrainable
         Excludes layers in optional arg exclude (tuple or list)
         """
-        layers = get_layers(self.net)
+        if net is None:
+            net = self.net
+
+        layers = get_layers(net)
         num_layers = len(layers)
         exclude = [i if i >= 0 else num_layers + i for i in exclude]
 
@@ -107,7 +110,7 @@ class Network(object):
             for param in layer.params:
                 layer.params[param].remove('trainable')
 
-        self.params = get_all_params(self.net, trainable=True)
+        self.params = get_all_params(net, trainable=True)       # CAUTION: needs rewritten to not throw errors as autoencoders develop
 
         return None
 
@@ -138,5 +141,90 @@ class Network(object):
             params_order = np.array([i[0][4:6] for i in params_list]).astype(int)
             params_list = [params_list[i] for i in params_order.argsort()]
             L.set_all_param_values(self.net, [i[1] for i in params_list])
+
+        return None
+
+class Autoencoder(Network):
+    """
+    Wrapper for training and testing transfer learning with an autoencoder.
+    Almost as cool as it sounds.
+
+    Later, use super() to cut down bloat inside functions
+    """
+
+    def __init__(self, architecture):
+        self.architecture = architecture
+        self.input_var = T.tensor4('inputs')
+        self.target_var = T.ivector('targets')
+        self.ae_target_var = T.tensor4('ae inputs')
+        self.update_algo = lasagne.updates.adam
+        self.val_trace = []
+        self.train_trace = []
+        self.build()
+        self.objectives()
+        self.compile_functions()
+
+    def build(self):
+        """Generates graph, caches params, output symbols"""
+        self.autoencoder, self.value_layer, self.net = self.architecture(self.input_var)
+        self.prediction = get_output(self.net)
+        self.test_prediction = get_output(self.net, deterministic=True)
+        self.value_prediction = get_output(self.value_layer)
+
+        self.image = get_output(self.autoencoder)
+        self.test_image = get_output(self.autoencoder, deterministic=True)
+        self.params = get_all_params(self.net)
+        self.ae_params = get_all_params(self.autoencoder)
+        return None
+
+    def objectives(self):
+        """Loss functions, etc"""
+        self.loss = cross_entropy(self.prediction, self.target_var).mean()
+        self.itemized_test_loss = cross_entropy(self.test_prediction, self.target_var)
+        self.test_loss = self.itemized_test_loss.mean()
+        self.test_acc = T.mean(
+            T.eq(T.argmax(self.test_prediction, axis=1), self.target_var),
+            dtype=theano.config.floatX
+        )
+
+        self.updates = self.update_algo(self.loss, self.params)
+
+        self.ae_loss = T.mean((self.ae_target_var - self.image)**2, dtype=theano.config.floatX)
+        self.ae_test_loss = T.mean((self.ae_target_var - self.test_image)**2, dtype=theano.config.floatX)
+        self.ae_updates = self.update_algo(self.ae_loss, self.ae_params)
+
+        return None
+
+    def compile_functions(self):
+        """Compile theano functions"""
+        self.output_fn = theano.function([self.input_var], self.test_prediction)
+        self.value_fn = theano.function([self.input_var], self.value_prediction)
+        self.train_fn = theano.function(
+            [self.input_var, self.target_var],
+            self.loss,
+            updates = self.updates
+        )
+
+        self.test_fn = theano.function(
+            [self.input_var, self.target_var],
+            [self.test_loss, self.test_acc]
+        )
+
+        self.itemized_test_fn = theano.function(
+            [self.input_var, self.target_var],
+            self.itemized_test_loss
+        )
+
+        self.ae_output_fn = theano.function([self.input_var], self.test_image)
+        self.ae_train_fn = theano.function(
+            [self.input_var, self.ae_target_var],
+            self.ae_loss,
+            updates=self.ae_updates
+        )
+
+        self.ae_test_fn = theano.function(
+            [self.input_var, self.ae_target_var],
+            self.ae_test_loss
+        )
 
         return None
