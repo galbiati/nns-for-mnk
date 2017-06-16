@@ -57,6 +57,7 @@ class Network(object):
             T.eq(T.argmax(self.test_prediction, axis=1), self.target_var),
             dtype=theano.config.floatX
         )
+        self.updates = self.update_algo(self.loss, self.params)
 
         return None
 
@@ -64,7 +65,6 @@ class Network(object):
         """
         Compiles theano functions for computing output, losses, etc
         """
-        self.updates = self.update_algo(self.loss, self.params)
         self.output_fn = theano.function([self.input_var], self.test_prediction)
         self.value_fn = theano.function([self.input_var], self.value_prediction)
         self.train_fn = theano.function(
