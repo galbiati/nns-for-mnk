@@ -9,11 +9,13 @@ import architectures as arches
 
 L = lasagne.layers
 
-headdir = os.path.expanduser('~/Google Drive/Bas Zahy Gianni - Games')
-paramsdir_ = os.path.join(headdir, 'Analysis/0_hvh/Params/nnets/')
+# loads data with names according to autoload_data.py
+from autoload_data import *
 
+# load specs for all networks
 with open('arch_specs.yaml') as archfile:
     arch_dict = yaml.load(archfile)
+
 
 def compute_pretrained_results(net, archname, idx, test_data, fake=False):
     Xt, yt = test_data
@@ -94,3 +96,47 @@ def count_pieces(row):
     n_wp = np.array(list(wp)).astype(int).sum()
 
     return n_bp + n_wp
+
+def rehydrate():
+    """Recompile networks, load params, and run on appropriate test data"""
+    Xt, yt, _, _, _ = loading.unpack_data(df)       # get Xs and ys
+
+    PTR = {}                # results and predictions holders
+    TR = {}
+    PTP = {}
+    TP = {}
+    param_counts = {}       # counter of parameters per net
+
+    for archname in arch_dict.keys():
+        # for each network
+        arch_dir = archname[:-1]        # get directory
+
+        if arch_dir not in os.listdir(paramsdir_):
+            # if it doesn't exist
+            print("{} not started".format(archname[:-1]))       # alert us
+            continue
+
+        files = os.listdir(os.path.join(paramsdir_, arch_dir))
+        if not any(archname.replace('_', ' ') in f for f in files):
+            # if a network doesn't have a full set of parameter fits
+            print("{} not completed".format(archname))      # let us know
+            continue
+
+        print(archname)
+        arch = arch_dict[archname]
+        af = getattr(arches, arch['type'])
+        arch_func = lambda input_var: af(input_var, **arch['kwargs'])
+        net = Network(arch_func)        # compile network from specs in arch_specs.yaml
+
+        param_counts[archname] = L.count_params(net.net)        # count the params
+        pretrain_R, pretrain_P, tune_R, tune_P = compute_net_results(net, archname, (Xt, yt), df)
+
+        PTR[archname] = pretrain_R      # insert results into respective holders
+        TR[archname] = tune_R
+        PTP[archname] = pretrain_P
+        TP[archname] = tune_P
+
+        pretrain_R.to_csv(os.path.join(resultsdir, 'pretrain {}.csv'.format(archname)))     # save results into respective directories
+        tune_R.to_csv(os.path.join(resultsdir, 'train {}.csv'.format(archname)))
+
+    return PTR, TR, PTP, TP
