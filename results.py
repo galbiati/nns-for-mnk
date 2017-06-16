@@ -65,7 +65,6 @@ def compute_net_results(net, archname, test_data, df):
     tune_results = []
     tune_predictions = []
 
-    print('pretrained results', archname)
     for idx in range(5):
         results_df, predictions_df = compute_pretrained_results(net, archname, idx, test_data)
         pretrain_results.append(results_df)
@@ -73,7 +72,6 @@ def compute_net_results(net, archname, test_data, df):
 
     pretrain_results = pd.concat(pretrain_results, axis=1)
 
-    print('tuned results', archname)
     for idx in range(5):
         for test_idx in range(5):
             results_df, predictions_df  = compute_tuned_results(net, archname, idx, test_idx, test_data, df)
