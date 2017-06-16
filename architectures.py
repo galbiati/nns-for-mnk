@@ -22,7 +22,7 @@ def multiconvX_ws(input_var=None, subnet_specs=None):
     ]
 
     network = WeightedSumLayer(subnets)
-    network = output_layers(network, prefilter=True)
+    network = output_layers(network, FixLayer, prefilter=True)
 
     return network
 
@@ -45,7 +45,7 @@ def multiconvX_ws_tanh(input_var=None, subnet_specs=None):
 
     network = WeightedSumLayer(subnets)
     network = L.NonlinearityLayer(network, nonlinearity=nl.tanh)
-    network = output_layers(network, prefilter=True)
+    network = output_layers(network, FixLayer, prefilter=True)
 
     return network
 
@@ -69,7 +69,7 @@ def multiconvX(input_var=None, subnet_specs=None):
     ]
 
     network = L.ElemwiseMergeLayer(subnets, merge_function=T.add)
-    network = output_layers(network, prefilter=True)
+    network = output_layers(network, FixLayer, prefilter=True)
     return network
 
 
@@ -99,7 +99,7 @@ def archX(input_var=None, num_filters=32, pool_size=2, filter_size=(4,4), pool=T
         nonlinearity=nl.very_leaky_rectify, W=lasagne.init.HeUniform(gain='relu')
     )
 
-    network = output_layers(network, prefilter=True)
+    network = output_layers(network, FixLayer, prefilter=True)
 
     return network
 
@@ -135,7 +135,7 @@ def archX_binconv(input_var=None,
         W=lasagne.init.HeUniform(gain='relu'), nonlinearity=nl.very_leaky_rectify
     )
 
-    network = output_layers(network, prefilter=True)
+    network = output_layers(network, FixLayer, prefilter=True)
 
     return network
 
@@ -183,6 +183,6 @@ def archX_deep(input_var=None,
         W=lasagne.init.HeUniform(gain='relu')
     )
 
-    network = output_layers(network, prefilter=True)
+    network = output_layers(network, FixLayer, prefilter=True)
 
     return network

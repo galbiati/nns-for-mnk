@@ -204,7 +204,7 @@ def make_subnets(network, input_var, subnet_func=subnet, subnet_specs=None):
     return subnets
 
 
-def output_layers(incoming, prefilter=False):
+def output_layers(incoming, FixLayer, prefilter=False):
     """Applies softmax and filters illegal moves"""
 
     if prefilter:
