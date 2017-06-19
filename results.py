@@ -96,7 +96,7 @@ def compute_net_results(net, archname, test_data, df):
     return pretrain_results, pretrain_predictions, tune_results, tune_predictions
 
 
-def rehydrate():
+def rehydrate(verbose=False):
     """
     Recompile networks, load params, and run on appropriate test data
 
@@ -133,7 +133,8 @@ def rehydrate():
             print("{} not completed".format(archname))      # let us know
             continue
 
-        print(archname)
+        if verbose:
+            print(archname)
         arch = arch_dict[archname]
         af = getattr(arches, arch['type'])
         arch_func = lambda input_var: af(input_var, **arch['kwargs'])
@@ -170,6 +171,45 @@ def count_pieces(row):
 
     return n_bp + n_wp
 
+def aggregate_results(PTR, TR, param_counts):
+    """
+    Args:
+    PTR, TR, are dictionaries of results dataframes with archnames as keys,
+        archnames as in arch_specs.yaml and PTR/TR as produced by rehydrate()
+    param_counts also keyed by archnames and as produced by rehydrate; contains
+        parameter counts
+
+    outputs:
+    F is a dataframe containing individual networks in rows with mean
+        performances in columns
+
+    """
+    pc_series = pd.Series(param_counts)
+    pc_series.to_csv(os.path.join(resultsdir, 'params per net.csv'))
+    F = pd.DataFrame(index=np.arange(len(pc_series.index)), columns=['net name'])
+    F['net name'] = pc_series.index
+    F['num params'] = pc_series.values
+
+    for k, v in PTR.items():
+        idx = F['net name'] == k
+        v['subject'] = Ss
+        v['mean'] = v.mean()
+        F.loc[idx, 'pretrained'] = v['mean'].mean()
+        pvt = v.pivot_table(index='subject', values='mean', aggfunc=np.mean).mean().values
+        F.loc[idx, 'pretrained subject'] = pvt
+
+    for k, v in TR.items():
+        idx = F['net name'] == k
+        v['subject'] = Ss
+        v['mean'] = v.mean()
+        F.loc[idx, 'tuned'] = v['mean'].mean()
+        pvt = v.pivot_table(index='subject', values='mean', aggfunc=np.mean).mean().values
+        F.loc[idx, 'tuned subject'] = pvt
+
+    F['tuning improvement'] = -(F['tuned'] - F['pretrained'])
+
+    return F
+
 def error_per_piece(archname, resultdict, datadf):
     """
     Args:
@@ -184,7 +224,7 @@ def error_per_piece(archname, resultdict, datadf):
         number of pieces in position
 
     """
-    
+
     chancenll = lambda x: -np.log(1/(36-x))
     cross_entropy = lambda row: -np.log(row[int(row['zet'])])
     preds = [pd.concat(resultdict[archname][i:i+5]).sort_index() for i in range(5)]
