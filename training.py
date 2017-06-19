@@ -5,7 +5,7 @@ import lasagne
 import time
 from scipy.stats import bayes_mvs
 from loading import augment
-from network import Network
+from network import Network, Autoencoder
 
 L = lasagne.layers
 T = theano.tensor
@@ -47,6 +47,8 @@ class Trainer(object):
         self.print_interval = print_interval
         self.update_args = update_args
         self.seed = seed
+        self.val_trace = []
+        self.train_trace = []
         if self.seed is not None:
             np.random.seed(self.seed)
 
@@ -84,22 +86,22 @@ class Trainer(object):
                 val_acc += accuracy
                 val_bats += 1
 
-            network.train_err = train_err / train_bats
-            network.val_err = val_err / val_bats
-            network.update_traces()
+            mean_train_err = train_err / train_bats
+            mean_val_err = val_err / val_bats
+            self.val_trace.append(mean_val_err)
 
             self.epoch = epoch
-            del_val_err = np.diff(network.val_trace)
+            del_val_err = np.diff(self.val_trace)
 
             if epoch > self.stopthresh:
-                if del_val_err[epoch-self.stopthresh:epoch].mean() > 0:
+                if del_val_err[epoch-self.stopthresh:].mean() > 0:
                     print("Abandon ship!")
                     break
 
             if epoch % self.print_interval == 0:
                 print("Epoch {} took {:.3f}s".format(epoch, epoch_dur))
-                print("\ttraining loss:\t\t\t{:.4f}".format(train_err/train_bats))
-                print("\tvalidation loss:\t\t{:.4f}".format(val_err/val_bats))
+                print("\ttraining loss:\t\t\t{:.4f}".format(mean_train_err))
+                print("\tvalidation loss:\t\t{:.4f}".format(mean_val_err))
                 print("\tvalidation accuracy:\t\t{:.2f}%".format(100*val_acc/val_bats))
                 print("\ttotal time elapsed:\t\t{:.3f}s".format(time.time() - self.train_start))
 
@@ -270,7 +272,7 @@ class FineTuner(DefaultTrainer):
         time_elapsed = time.time() - starttime
 
         return net
-        
+
 
 class AutoencoderTrainer(DefaultTrainer):
     def train_autoencoder(self, net, X):
@@ -309,7 +311,7 @@ class AutoencoderTrainer(DefaultTrainer):
             validation_trace.append(net.ae_validation_error)
 
             if epoch > self.stopthresh:
-                if np.mean(validation_trace[epoch-self.stopthresh:epoch]) > 0:
+                if np.mean(validation_trace[epoch-self.stopthresh:]) > 0:
                     print('Abandon ship!')
                     break
 
@@ -325,7 +327,7 @@ class AutoencoderTrainer(DefaultTrainer):
         print('\nSplit Number {}'.format(split))
         D, groups, Xs, ys, Ss = data
         num_splits = len(Xs)
-        train_idxs, val_idxs, test_idxs = self.get_split_idxs(nump_splits, split)
+        train_idxs, val_idxs, test_idxs = self.get_split_idxs(num_splits, split)
 
         X, y, S = [np.concatenate(np.array(Z)[train_idxs]) for Z in [Xs, ys, Ss]]   # compile testing, validation, and training splits into single arrays
         Xv, yv, Sv = [np.concatenate(np.array(Z)[val_idxs]) for Z in [Xs, ys, Ss]]
@@ -340,20 +342,13 @@ class AutoencoderTrainer(DefaultTrainer):
         return net
 
 
-    def train_all(self, architecture, data, seed=None, save_params=False, augment_fn=augment):
+    def train_all(self, net, data, seed=None, save_params=False, augment_fn=augment):
         net_list = []
 
         if seed:
             np.random.seed(seed)
 
-        net = Autoencoder(architecture)
-        ae_start_params = L.get_all_param_values(net.autoencoder)
-
         Xs = np.concatenate(data[2])
-        self.train_autoencoder(net, Xs)
-        ae_params = L.get_all_param_values(net.autoencoder)
-        net.freeze_params(exclude=list(range(-7, 0)))
-
         start_params = L.get_all_param_values(net.net)            # cache params to avoid recompiling
 
         num_splits = len(data[2])
