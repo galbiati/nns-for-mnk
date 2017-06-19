@@ -16,8 +16,12 @@ from autoload_data import *
 with open('arch_specs.yaml') as archfile:
     arch_dict = yaml.load(archfile)
 
+### Compiling results from saved parameters ###
 
 def compute_pretrained_results(net, archname, idx, test_data, fake=False):
+    """
+    Compute pre-tuning results for a given arch/network on appropriate test data
+    """
     Xt, yt = test_data
 
     if fake:
@@ -40,7 +44,12 @@ def compute_pretrained_results(net, archname, idx, test_data, fake=False):
 
     return results_df, predictions
 
+
 def compute_tuned_results(net, archname, idx, test_idx, test_data, df):
+    """
+    Compute post-tuning results for a given architecture/network on appropriate
+        test data
+    """
     Xt, yt = test_data
     group_idx = (test_idx - 1) % 5 # fix eventually to take df/groupidx/selection passed independently?
     selection = df.loc[df['group']==(group_idx+1)].index.values
@@ -60,6 +69,10 @@ def compute_tuned_results(net, archname, idx, test_idx, test_data, df):
 
 
 def compute_net_results(net, archname, test_data, df):
+    """
+    For a given network, test on appropriate test data and return dataframes
+    with results and predictions (named obviously)
+    """
     pretrain_results = []
     pretrain_predictions = []
     tune_results = []
@@ -83,20 +96,20 @@ def compute_net_results(net, archname, test_data, df):
     return pretrain_results, pretrain_predictions, tune_results, tune_predictions
 
 
-def entropy_zets(zets):
-    z = np.histogram(zets, bins=np.arange(37), normed=True)[0]
-    z = z[z > 0]
-    return -(z * np.log2(z)).sum()
-
-def count_pieces(row):
-    bp, wp = row[['bp', 'wp']]
-    n_bp = np.array(list(bp)).astype(int).sum()
-    n_wp = np.array(list(wp)).astype(int).sum()
-
-    return n_bp + n_wp
-
 def rehydrate():
-    """Recompile networks, load params, and run on appropriate test data"""
+    """
+    Recompile networks, load params, and run on appropriate test data
+
+    outputs dictionaries with keys = names of architectures as in arch_specs.yaml
+
+    outputs:
+    PTx is pretrained on bulk but untuned
+    Tx is tuned
+    xR is results (nlls)
+    xP is predictions (distributions)
+
+    param_counts is what it sounds like.
+    """
     Xt, yt, _, _, _ = loading.unpack_data(df)       # get Xs and ys
 
     PTR = {}                # results and predictions holders
@@ -140,6 +153,23 @@ def rehydrate():
     return PTR, TR, PTP, TP, param_counts
 
 
+### Statistics and summaries ###
+
+def entropy_zets(zets):
+    """Shannon entropy"""
+    z = np.histogram(zets, bins=np.arange(37), normed=True)[0]
+    z = z[z > 0]
+    return -(z * np.log2(z)).sum()
+
+
+def count_pieces(row):
+    """Counts pieces in a given binstring state representation"""
+    bp, wp = row[['bp', 'wp']]
+    n_bp = np.array(list(bp)).astype(int).sum()
+    n_wp = np.array(list(wp)).astype(int).sum()
+
+    return n_bp + n_wp
+
 def error_per_piece(archname, resultdict, datadf):
     """
     Args:
@@ -154,6 +184,7 @@ def error_per_piece(archname, resultdict, datadf):
         number of pieces in position
 
     """
+    
     chancenll = lambda x: -np.log(1/(36-x))
     cross_entropy = lambda row: -np.log(row[int(row['zet'])])
     preds = [pd.concat(resultdict[archname][i:i+5]).sort_index() for i in range(5)]
