@@ -137,4 +137,39 @@ def rehydrate():
         pretrain_R.to_csv(os.path.join(resultsdir, 'pretrain {}.csv'.format(archname)))     # save results into respective directories
         tune_R.to_csv(os.path.join(resultsdir, 'train {}.csv'.format(archname)))
 
-    return PTR, TR, PTP, TP
+    return PTR, TR, PTP, TP, param_counts
+
+
+def error_per_piece(archname, resultdict, datadf):
+    """
+    Args:
+    archname is name of architecture as in arch_specs.yaml
+    resultdict should be a dictionary of predictions where keys = archnames
+    datadf is the original data containing positions, subjects, moves, etc
+
+    Outputs:
+    preds is a list of dataframes containing predictions for reach observation
+        in datadf and training split for archname
+    per_pieces is a df with the mean chance-relative nll for each subject and
+        number of pieces in position
+
+    """
+    chancenll = lambda x: -np.log(1/(36-x))
+    cross_entropy = lambda row: -np.log(row[int(row['zet'])])
+    preds = [pd.concat(resultdict[archname][i:i+5]).sort_index() for i in range(5)]
+
+    for pred in preds:
+        pred['subject'] = df['subject']
+        pred['zet'] = df['zet']
+        pred['num pieces'] = df['np']
+        pred['rt'] = df['rt']
+        pred['chance nll'] = chancenll(df['np'].values)
+        pred['error'] = pred.apply(cross_entropy, axis=1)
+        pred['relative error'] = pred['chance nll'] - pred['error']
+
+    per_pieces = pd.concat([
+        p.pivot_table(index='subject', values='relative error', columns='num pieces').mean(axis=0)
+        for p in preds
+    ], axis=1)
+
+    return preds, per_pieces
