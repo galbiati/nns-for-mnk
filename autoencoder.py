@@ -9,8 +9,8 @@ L = lasagne.layers
 nl = lasagne.nonlinearities
 
 def autoencoder(input_var=None,
-                    num_filters=32, filter_size=(3, 3), pad='same',
-                    latent_size=128):
+                    num_filters=32, filter_size=(4, 4), pad='full',
+                    latent_size=256):
 
     input_shape = (None, 2, 4, 9)
     FixLayer = make_FixLayer(input_var)
@@ -20,20 +20,29 @@ def autoencoder(input_var=None,
     conv1 = L.Conv2DLayer(
         input_layer,
         num_filters=num_filters, filter_size=filter_size, pad=pad,
-        nonlinearity=nl.tanh
+        nonlinearity=nl.very_leaky_rectify
     )
+
     conv1_d = L.DropoutLayer(conv1, p=.0625, shared_axes=(2, 3))
 
-    latent = L.DenseLayer(conv1_d, num_units=latent_size, nonlinearity=nl.rectify)
+    conv2 = L.Conv2DLayer(
+        conv1,
+        num_filters=num_filters*2, filter_size=filter_size, pad=pad,
+        nonlinearity=nl.very_leaky_rectify
+    )
+
+    conv2_d = L.DropoutLayer(conv2, p=.0625, shared_axes=(2, 3))
+
+    latent = L.DenseLayer(conv2_d, num_units=latent_size, nonlinearity=nl.very_leaky_rectify)
     latent_d = L.DropoutLayer(latent, p=.25)
 
     # decode
     latent_decode = L.InverseLayer(latent_d, latent)
-    latent_decode_d = L.DropoutLayer(latent_decode, p=.0625, shared_axes=(2, 3))
-    unconv1 = L.InverseLayer(latent_decode_d, conv1)
+    unconv2 = L.InverseLayer(latent_decode, conv2)
+    decoded = L.InverseLayer(unconv2, conv1)
 
     # predict
-    values = L.DenseLayer(latent_d, num_units=36, nonlinearity=nl.rectify)
+    values = L.DenseLayer(latent_d, num_units=36, nonlinearity=nl.very_leaky_rectify)
     prediction = output_layers(values, FixLayer, prefilter=False)
 
-    return unconv1, values, prediction
+    return decoded, values, prediction
