@@ -15,7 +15,7 @@ def binarize(input_tensor):
     Might be better to achieve this by
     forcing boolean shared on ConvLayer subclass
     """
-    return T.cast(input_tensor >= .5, theano.config.floatX)
+    return 2 * T.cast(input_tensor >= .5, theano.config.floatX) - 1
 
 
 def sum_count_conv(input, W, input_shape, W_shape,
@@ -77,6 +77,10 @@ def make_FixLayer(input_var):
 class BinConvLayer(L.Conv2DLayer):
     """
     Binarizes weights before computing convolution
+
+    This does not work very well; gradient is 0 at all locations, so backprop
+    does not work correctly. Consider using tanh or sigmoid activation function
+    instead.
     """
 
     def convolve(self, input, **kwargs):
