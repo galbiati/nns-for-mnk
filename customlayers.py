@@ -178,10 +178,41 @@ def subnet2(network, input_var,
     net = L.FeaturePoolLayer(net, pool_function=T.sum, pool_size=num_filters)
     net = L.DenseLayer(
         net,
-        num_units=36, W=lasagne.init.GlorotUniform(gain=1.0), **denskws
+        num_units=36, W=lasagne.init.GlorotUniform(gain=1.0), **densekws
     )
 
     net = L.DropoutLayer(net, p=.125)
+    return net
+
+
+def subnet3(network, input_var,
+            num_filters=4, filter_size=(4, 4), pad='full'):
+    """
+    Subnet produces a "column" with a given convolution shape and filter count
+
+    Return to this to make kwarg passing more legible (low priority)
+    """
+
+    FixLayer = make_FixLayer(input_var)
+
+    net = L.Conv2DLayer(
+        network,
+        num_filters=num_filters, filter_size=filter_size, pad=pad,
+        nonlinearity=nl.identity
+    )
+
+    net = L.ParametricRectifierLayer(net, shared_axes='auto')
+    net = L.DropoutLayer(net, p=.125, shared_axes=(2, 3))
+    net = L.FeaturePoolLayer(net, pool_function=T.sum, pool_size=num_filters)
+    net = L.DenseLayer(
+        net, num_units=36,
+        nonlinearity=nl.identity, W=lasagne.init.HeUniform(gain='relu')
+    )
+    net = L.ParametricRectifierLayer(net, shared_axes='auto')
+
+    net = L.DropoutLayer(net, p=.125)
+    net = FixLayer(net)
+
     return net
 
 
