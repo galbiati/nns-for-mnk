@@ -9,8 +9,8 @@ L = lasagne.layers
 nl = lasagne.nonlinearities
 
 def autoencoder(input_var=None,
-                    num_filters=32, filter_size=(4, 4), pad='full',
-                    latent_size=256):
+                    num_filters=16, filter_size=(4, 4), pad='full',
+                    latent_size=20):
 
     input_shape = (None, 2, 4, 9)
     FixLayer = make_FixLayer(input_var)
