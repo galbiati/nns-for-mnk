@@ -26,6 +26,29 @@ def multiconvX_ws(input_var=None, subnet_specs=None):
 
     return network
 
+def multiconvX_ws_fullpad(input_var=None, subnet_specs=None):
+    """Columnar architecture WITH feature value weighting"""
+    if subnet_specs is None:
+        # set default: 3 horizontal, 3 vertical, 3 diagonal/complex
+        subnet_specs = [
+            (1, (1, 4)), (1, (4, 1)), (1, 4, 4),
+            (1, (1, 4)), (1, (4, 1)), (1, 4, 4),
+            (1, (1, 4)), (1, (4, 1)), (1, 4, 4)
+        ]
+
+    FixLayer = make_FixLayer(input_var)
+    input_shape = (None, 2, 4, 9)
+    input_layer = L.InputLayer(shape=input_shape, input_var=input_var)
+    subnets = [
+        subnet3(input_layer, input_var, num_filters=nf, filter_size=fs)
+        for nf, fs in subnet_specs
+    ]
+
+    network = WeightedSumLayer(subnets)
+    network = output_layers(network, FixLayer, prefilter=True)
+
+    return network
+
 
 def multiconvX_ws_tanh(input_var=None, subnet_specs=None):
     """Columnar architecture with feature value weighting and tanh activation"""
