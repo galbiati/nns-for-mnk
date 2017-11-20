@@ -39,7 +39,7 @@ with open('arch_specs.yaml') as archfile:
 
 # experiment functions
 def run_tuned_fit(architecture, data, hvhdata, paramsdir,
-                    tune=True, save=True, freeze=True):
+                    tune=True, save=False, freeze=True):
     """
     Runs the full fitting experiment, pretraining on later experiments and
     testing on first.

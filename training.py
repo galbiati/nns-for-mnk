@@ -65,6 +65,7 @@ class Trainer(object):
         self.train_start = time.time()
 
         for epoch in range(self.max_epoch):
+            train_err_reg = 0
             train_err = 0
             train_bats = 0
             val_err = 0
@@ -74,7 +75,8 @@ class Trainer(object):
 
             for batch in self.iterate_minibatches(X, y, shuffle=True):
                 inputs, targets = batch
-                train_err += network.train_fn(inputs, targets)
+                train_err_reg += network.train_fn(inputs, targets)
+                train_err += network.test_fn(inputs, targets)[0]
                 train_bats += 1
 
             epoch_dur = time.time() - epoch_start

@@ -8,9 +8,9 @@ def multiconvX_ws(input_var=None, subnet_specs=None):
     if subnet_specs is None:
         # set default: 3 horizontal, 3 vertical, 3 diagonal/complex
         subnet_specs = [
-            (1, (1, 4)), (1, (4, 1)), (1, 4, 4),
-            (1, (1, 4)), (1, (4, 1)), (1, 4, 4),
-            (1, (1, 4)), (1, (4, 1)), (1, 4, 4)
+            (1, (1, 4)), (1, (4, 1)), (1, (4, 4)),
+            (1, (1, 4)), (1, (4, 1)), (1, (4, 4)),
+            (1, (1, 4)), (1, (4, 1)), (1, (4, 4))
         ]
 
     FixLayer = make_FixLayer(input_var)

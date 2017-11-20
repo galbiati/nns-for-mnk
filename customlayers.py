@@ -109,7 +109,7 @@ class WeightedSumLayer(L.ElemwiseMergeLayer):
     def __init__(self, incoming, W=lasagne.init.Constant(1.), **kwargs):
         super(L.ElemwiseMergeLayer, self).__init__(incoming, T.add, **kwargs)
         num_inputs = len(incoming)
-        self.W = self.add_param(W, (num_inputs,), name='W')
+        self.W = self.add_param(W, (num_inputs,), name='wsum.W')
 
     def get_output_shape_for(self, input_shapes):
         return (None, 36) # hardcode because I'm an ignorant pig
@@ -131,7 +131,8 @@ class ReNormLayer(L.Layer):
 
 
 def subnet(network, input_var,
-            num_filters=4, filter_size=(4, 4), pad='valid'):
+            num_filters=4, filter_size=(4, 4), pad='valid',
+            name='subnet'):
     """
     Subnet produces a "column" with a given convolution shape and filter count
 
@@ -143,7 +144,7 @@ def subnet(network, input_var,
     net = L.Conv2DLayer(
         network,
         num_filters=num_filters, filter_size=filter_size, pad=pad,
-        nonlinearity=nl.identity
+        nonlinearity=nl.identity, name=name + '_conv'
     )
 
     net = L.ParametricRectifierLayer(net, shared_axes='auto')
@@ -151,7 +152,8 @@ def subnet(network, input_var,
     net = L.FeaturePoolLayer(net, pool_function=T.sum, pool_size=num_filters)
     net = L.DenseLayer(
         net, num_units=36,
-        nonlinearity=nl.very_leaky_rectify, W=lasagne.init.HeUniform(gain='relu')
+        nonlinearity=nl.very_leaky_rectify, W=lasagne.init.HeUniform(gain='relu'),
+        name=name + '_dense'
     )
     net = L.DropoutLayer(net, p=.125)
     net = FixLayer(net)

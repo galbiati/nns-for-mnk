@@ -41,6 +41,9 @@ class Network(object):
         self.prediction = get_output(self.net)
         self.test_prediction = get_output(self.net, deterministic=True)
         self.params = get_all_params(self.net, trainable=True)
+        self.filters = [p for p in self.params if 'conv.W' in p.name]
+        self.val_weights = [p for p in self.params if 'dense.W' in p.name]
+        self.wsum_weights = [p for p in self.params if 'wsum.W' in p.name]
         self.value_layer = get_layers(self.net)[-4]
         self.value_prediction = get_output(self.value_layer)
         return None
@@ -51,6 +54,24 @@ class Network(object):
         """
         self.loss = cross_entropy(self.prediction, self.target_var)
         self.loss = self.loss.mean()
+        # regularizers
+        l2 = lambda x: T.sum([T.sum(T.pow(f, 2)) for f in x])
+        l1 = lambda x: T.sum([T.sum(T.abs_(w)) for w in x])
+
+
+        # conv weights should be close to either 0 or 1, so use modified l2
+        self.conv_weights_l2 = .5 * l2(self.filters) + .5 * l2([f - 1 for f in self.filters])
+        # filters should be sparse-ish
+        self.conv_weights_size_l2 = T.sum(T.pow([T.sum(f) for f in self.filters], 2))
+        # value weights should be sparse
+        self.val_weights_l1 = l1(self.val_weights)
+        # sum weights should be smallish
+        self.wsum_weights_l2 = T.sum(T.pow(self.wsum_weights, 2))
+
+        self.reg_terms = self.conv_weights_l2 + .1 * self.conv_weights_size_l2
+        self.reg_terms += self.val_weights_l1 + .1 * self.wsum_weights_l2
+
+        self.regularized_loss = self.loss + self.reg_terms
         self.itemized_loss = cross_entropy(self.test_prediction, self.target_var)
         self.test_loss = self.itemized_loss.mean()
         self.test_acc = T.mean(
@@ -68,7 +89,7 @@ class Network(object):
         self.output_fn = theano.function([self.input_var], self.test_prediction)
         self.value_fn = theano.function([self.input_var], self.value_prediction)
         self.train_fn = theano.function(
-            [self.input_var, self.target_var], self.loss,
+            [self.input_var, self.target_var], self.regularized_loss,
             updates=self.updates
         )
         self.test_fn = theano.function(
