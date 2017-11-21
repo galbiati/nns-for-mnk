@@ -41,7 +41,9 @@ class Network(object):
         self.prediction = get_output(self.net)
         self.test_prediction = get_output(self.net, deterministic=True)
         self.params = get_all_params(self.net, trainable=True)
-        self.filters = [p for p in self.params if 'conv.W' in p.name]
+        self.layers = L.get_all_layers(self.net)
+        self.named_layers = [layer for layer in self.layers if type(layer.name) == str]
+        self.conv_layers = [layer for layer in self.named_layers if 'conv' in layer.name]
         self.val_weights = [p for p in self.params if 'dense.W' in p.name]
         self.wsum_weights = [p for p in self.params if 'wsum.W' in p.name]
         self.value_layer = get_layers(self.net)[-4]
@@ -55,18 +57,36 @@ class Network(object):
         self.loss = cross_entropy(self.prediction, self.target_var)
         self.loss = self.loss.mean()
         # regularizers
-        l2 = lambda x: T.sum([T.sum(T.pow(f, 2)) for f in x])
-        l1 = lambda x: T.sum([T.sum(T.abs_(w)) for w in x])
+        l1 = lambda x: T.sum(T.abs_(x))
+        l2 = lambda x: T.sum(T.pow(x, 2))
+        l2_1 = lambda x: T.sum(T.pow(x - 1, 2))
+        l2_l = lambda x: T.pow(T.sum(x), 2)
 
+        l2_reg = lasagne.regularization.regularize_layer_params(
+            self.conv_layers, l2
+        )
+
+        l2_reg_1 = lasagne.regularization.regularize_layer_params(
+            self.conv_layers, l2_1
+        )
 
         # conv weights should be close to either 0 or 1, so use modified l2
-        self.conv_weights_l2 = .5 * l2(self.filters) + .5 * l2([f - 1 for f in self.filters])
+        self.conv_weights_l2 = .5 * l2_reg + .5 * l2_reg_1
+
         # filters should be sparse-ish
-        self.conv_weights_size_l2 = T.sum(T.pow([T.sum(f) for f in self.filters], 2))
-        # value weights should be sparse
-        self.val_weights_l1 = l1(self.val_weights)
+
+        self.conv_weights_size_l2 = lasagne.regularization.regularize_layer_params(
+            self.conv_layers, l2_l
+        )
+
+        # value weights should be diffuse
+        self.val_weights_l2 = lasagne.regularization.regularize_layer_params(
+            [layer for layer in self.named_layers if 'dense' in layer.name],
+            l2
+        )
+
         # sum weights should be smallish
-        self.wsum_weights_l2 = T.sum(T.pow(self.wsum_weights, 2))
+        self.wsum_weights_l2 = l2(self.wsum_weights)
 
         self.reg_terms = self.conv_weights_l2 + .1 * self.conv_weights_size_l2
         self.reg_terms += self.val_weights_l1 + .1 * self.wsum_weights_l2
